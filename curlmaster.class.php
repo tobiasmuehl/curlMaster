@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.1 (2017-03-14)
+ * @version    0.2 (2017-03-14 10:43:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -27,7 +27,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '0.1';
+  const VERSION = '0.2';
 
   /**
    * Filename (incl. path) of CA certificate
@@ -90,6 +90,10 @@ class curlMaster {
       $this->headers = array('Connection: Close');
     }
     #----
+    if (empty($this->useragent)) {
+      $this->useragent = 'Mozilla/5.0 (curlMaster/'.self::VERSION.'; +https://github.com/peterkahl/curlMaster)';
+    }
+    #----
     curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
     curl_setopt($ch, CURLOPT_HTTPGET, true);
@@ -98,10 +102,7 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
     curl_setopt($ch, CURLOPT_ENCODING , '');
     curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
-    #----
-    if (!empty($this->useragent)) {
-      curl_setopt($ch, CURLOPT_USERAGENT, $this->useragent);
-    }
+    curl_setopt($ch, CURLOPT_USERAGENT, $this->useragent);
     #----
     if (preg_match('/^https:/', $url)) {
       if (empty($this->ca_file)) {
@@ -134,13 +135,13 @@ class curlMaster {
       return false;
     }
     throw new Exception('CURL ERROR No. '.$err.'. Details are --'                              . PHP_EOL . PHP_EOL .
-		str_pad('ERROR ',              22, '.', STR_PAD_RIGHT) .' '. $this->curlErrorCode($err)    . PHP_EOL .
-		str_pad('Loop Count ',         22, '.', STR_PAD_RIGHT) .' '. $this->loop_count             . PHP_EOL .
-		str_pad('URL ',                22, '.', STR_PAD_RIGHT) .' '. $info['url']                  . PHP_EOL .
-		str_pad('HTTP Code ',          22, '.', STR_PAD_RIGHT) .' '. $info['http_code']            . PHP_EOL .
-		str_pad('Connect Time ',       22, '.', STR_PAD_RIGHT) .' '. $info['connect_time']         . PHP_EOL .
-		str_pad('Total Time ',         22, '.', STR_PAD_RIGHT) .' '. $info['total_time']           . PHP_EOL .
-		str_pad('Name Lookup Time ',   22, '.', STR_PAD_RIGHT) .' '. $info['namelookup_time']      . PHP_EOL
+    str_pad('ERROR ',              22, '.', STR_PAD_RIGHT) .' '. $this->curlErrorCode($err)    . PHP_EOL .
+    str_pad('Loop Count ',         22, '.', STR_PAD_RIGHT) .' '. $this->loop_count             . PHP_EOL .
+    str_pad('URL ',                22, '.', STR_PAD_RIGHT) .' '. $info['url']                  . PHP_EOL .
+    str_pad('HTTP Code ',          22, '.', STR_PAD_RIGHT) .' '. $info['http_code']            . PHP_EOL .
+    str_pad('Connect Time ',       22, '.', STR_PAD_RIGHT) .' '. $info['connect_time']         . PHP_EOL .
+    str_pad('Total Time ',         22, '.', STR_PAD_RIGHT) .' '. $info['total_time']           . PHP_EOL .
+    str_pad('Name Lookup Time ',   22, '.', STR_PAD_RIGHT) .' '. $info['namelookup_time']      . PHP_EOL
     );
   }
 
@@ -238,11 +239,11 @@ class curlMaster {
   #===================================================================
 
   private function validateUrl($url) {
-		if (preg_match('#^https?://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*(:\d{1,5})?/\S*$#', $url)) {
-		  return true;
-		}
-		return false;
-	}
+    if (preg_match('#^https?://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*(:\d{1,5})?/\S*$#', $url)) {
+      return true;
+    }
+    return false;
+  }
 
   #===================================================================
 }
