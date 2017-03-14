@@ -1,4 +1,4 @@
-# curlMaster
+#curlMaster
 Simple curl wrapper. At the moment, only method GET.
 
 ##Usage
