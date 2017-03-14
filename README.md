@@ -1,0 +1,2 @@
+# curlMaster
+Simple curl wrapper.
