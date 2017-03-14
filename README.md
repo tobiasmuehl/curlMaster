@@ -1,7 +1,7 @@
-#curlMaster
+# curlMaster
 Simple curl wrapper. At the moment, only method GET.
 
-##Usage
+## Usage
 
 ```php
 require __DIR__.'/curlmaster.class.php';
