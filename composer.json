@@ -1,5 +1,6 @@
 {
     "name": "colossalmind/curl-master",
+    "description": "Lightweight cURL wrapper.",
     "homepage": "https://github.com/peterkahl/curlMaster",
     "license": "Apache License Version 2.0",
     "authors": [
