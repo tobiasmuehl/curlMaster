@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.2 (2017-03-14 10:43:00 GMT)
+ * @version    0.3 (2017-04-09 23:57:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -21,13 +21,15 @@
  * limitations under the License.
  */
 
+namespace curlMaster;
+
 class curlMaster {
 
   /**
    * Version
    * @var string
    */
-  const VERSION = '0.2';
+  const VERSION = '0.3';
 
   /**
    * Filename (incl. path) of CA certificate
