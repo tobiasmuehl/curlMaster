@@ -1,5 +1,6 @@
 {
     "name": "peterkahl/curl-master",
+    "type": "library",
     "description": "Lightweight cURL wrapper.",
     "homepage": "https://github.com/peterkahl/curlMaster",
     "license": "Apache License Version 2.0",
