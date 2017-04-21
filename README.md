@@ -4,7 +4,7 @@ Simple curl wrapper. At the moment, only method GET.
 ## Usage
 
 ```php
-use curlMaster\curlMaster;
+use peterkahl\curlMaster\curlMaster;
 
 $curlm = new curlMaster;
 $response = $curlm->get_curl('http://some.url/blah.blah');
@@ -15,7 +15,7 @@ if (!empty($response)) {
 
 ### When using HTTPS:
 ```php
-use curlMaster\curlMaster;
+use peterkahl\curlMaster\curlMaster;
 
 $curlm = new curlMaster;
 

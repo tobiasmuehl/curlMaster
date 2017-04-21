@@ -2,6 +2,7 @@
     "name": "peterkahl/curl-master",
     "type": "library",
     "description": "Lightweight cURL wrapper.",
+    "keywords": ["curl", "http-client", "http", "https"],
     "homepage": "https://github.com/peterkahl/curlMaster",
     "license": "Apache License Version 2.0",
     "authors": [
@@ -17,7 +18,7 @@
     },
     "autoload": {
         "psr-4": {
-            "curlMaster\\": "src/curlMaster"
+            "peterkahl\\curlMaster\\": "src/"
         }
     }
 }
