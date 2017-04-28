@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.3 (2017-04-09 23:57:00 GMT)
+ * @version    0.4 (2017-04-28 01:31:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -23,13 +23,15 @@
 
 namespace peterkahl\curlMaster;
 
+use \Exception;
+
 class curlMaster {
 
   /**
    * Version
    * @var string
    */
-  const VERSION = '0.3';
+  const VERSION = '0.4';
 
   /**
    * Filename (incl. path) of CA certificate
@@ -79,7 +81,7 @@ class curlMaster {
     $this->loop_count++;
     #----
     if (!$this->validateUrl($url)) {
-      throw new InvalidArgumentException('Illegal value argument url');
+      throw new Exception('Illegal value argument url');
     }
     $ch = curl_init($url);
     if ($ch == false) {
