@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.4 (2017-04-28 01:31:00 GMT)
+ * @version    0.5 (2017-04-28 02:39:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '0.4';
+  const VERSION = '0.5';
 
   /**
    * Filename (incl. path) of CA certificate
@@ -116,6 +116,7 @@ class curlMaster {
       if (!file_exists($this->ca_file)) {
         throw new Exception('Unable to read file '.$this->ca_file);
       }
+      curl_setopt($ch, CURLOPT_SSLVERSION, 6); # TLSv1.2
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
       curl_setopt($ch, CURLOPT_CAINFO, $this->ca_file);
