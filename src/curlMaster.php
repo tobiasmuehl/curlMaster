@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.5 (2017-04-28 02:39:00 GMT)
+ * @version    0.6 (2017-05-19 03:09:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '0.5';
+  const VERSION = '0.6';
 
   /**
    * Filename (incl. path) of CA certificate
@@ -127,8 +127,7 @@ class curlMaster {
     #----
     if ($err == 0) { # Success
       curl_close($ch);
-      $tokens = explode("\r\n\r\n", trim($res));
-      return trim(end($tokens));
+      return $res;
     }
     if ($err == 6 && $this->loop_count <= $this->loop_limit) { # Couldn't resolve host
       sleep(1);
