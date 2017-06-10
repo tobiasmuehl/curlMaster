@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.7 (2017-06-10 10:41:00 GMT)
+ * @version    0.8 (2017-06-10 22:56:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '0.7';
+  const VERSION = '0.8';
 
   /**
    * Response Caching.
@@ -81,7 +81,7 @@ class curlMaster {
   /**
    * HTTP request headers (optional)
    * @var array
-   * Example ... array('Connection: Close');
+   * Example ... array('Connection: Close', 'X-API-Key: 7KgvBPUXh_XKQAMG');
    */
   public $headers;
 
@@ -110,6 +110,7 @@ class curlMaster {
     }
     #----
     if ($this->CacheResponse) {
+      $this->PurgeCache();
       $cacheFilename = $this->CacheDir .'/'. sha1($url . serialize($this->headers)) .'.curl';
       if (file_exists($cacheFilename) && filemtime($cacheFilename) > (time() - $this->CacheMaxAge)) {
         $res = file_get_contents($cacheFilename);
@@ -292,7 +293,27 @@ class curlMaster {
 
   private function getHeaders($str) {
     $str = explode("\r\n\r\n", $str);
-    return reset($str);
+    $str = reset($str);
+    $str = explode("\r\n", $str);
+    $new = array();
+    $s = 1;
+    foreach ($str as $line) {
+      $pos = strpos($line, ': ');
+      if ($pos !== false) {
+        $key = strtolower(substr($line, 0, $pos));
+        if (!isset($new[$key])) {
+          $new[$key] = preg_replace('/\s+/', ' ', trim(substr($line, $pos+1)));
+        }
+        else {
+          $new[$key.'-'.$s] = preg_replace('/\s+/', ' ', trim(substr($line, $pos+1)));
+          $s++;
+        }
+      }
+      else {
+        $new['status'] = $line; # HTTP/1.1 200 OK
+      }
+    }
+    return $new;
   }
 
   #===================================================================
@@ -300,6 +321,16 @@ class curlMaster {
   private function getBody($str) {
     $str = substr($str, strpos($str, "\r\n\r\n"));
     return trim($str);
+  }
+
+  #===================================================================
+
+  public function PurgeCache() {
+    foreach (glob($this->CacheDir .'/*.curl') as $filename) {
+      if (filemtime($filename) < (time() - $this->CacheMaxAge)) {
+        unlink($filename);
+      }
+    }
   }
 
   #===================================================================
