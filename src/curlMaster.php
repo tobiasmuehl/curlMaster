@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.6 (2017-05-19 03:09:00 GMT)
+ * @version    0.7 (2017-06-10 10:41:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,27 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '0.6';
+  const VERSION = '0.7';
+
+  /**
+   * Response Caching.
+   * This is useful when you expect the same response for each request,
+   * when debugging, when you cUrl an API with request limit.
+   * @var string
+   */
+  public $CacheResponse = false;
+
+  /**
+   * Maximum age of chached responses (in seconds).
+   * @var integer
+   */
+  public $CacheMaxAge = 86400;
+
+  /**
+   * Cache directory
+   * @var string
+   */
+  public $CacheDir = '/srv/cache';
 
   /**
    * Filename (incl. path) of CA certificate
@@ -42,6 +62,11 @@ class curlMaster {
    */
   public $ca_file;
 
+  /**
+   * User Agent
+   * You can define your own user agent.
+   * @var string
+   */
   public $useragent;
 
   public $timeout_sec = 30;
@@ -54,7 +79,7 @@ class curlMaster {
   public $debug = false;
 
   /**
-   * HTTP headers (optional)
+   * HTTP request headers (optional)
    * @var array
    * Example ... array('Connection: Close');
    */
@@ -83,31 +108,39 @@ class curlMaster {
     if (!$this->validateUrl($url)) {
       throw new Exception('Illegal value argument url');
     }
+    #----
+    if ($this->CacheResponse) {
+      $cacheFilename = $this->CacheDir .'/'. sha1($url . serialize($this->headers)) .'.curl';
+      if (file_exists($cacheFilename) && filemtime($cacheFilename) > (time() - $this->CacheMaxAge)) {
+        $res = file_get_contents($cacheFilename);
+        return array(
+          'headers' => $this->getHeaders($res),
+          'body'    => $this->getBody($res),
+        );
+      }
+    }
+    #----
     $ch = curl_init($url);
     if ($ch == false) {
       return false;
     }
     #----
-    if (is_array($this->headers)) {
-      $this->headers = array_merge($this->headers, array('Connection: Close'));
-    }
-    else {
-      $this->headers = array('Connection: Close');
-    }
-    #----
     if (empty($this->useragent)) {
-      $this->useragent = 'Mozilla/5.0 (curlMaster/'.self::VERSION.'; +https://github.com/peterkahl/curlMaster)';
+      $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
     #----
-    curl_setopt($ch, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST, 'GET');
-    curl_setopt($ch, CURLOPT_HTTPGET, true);
+    curl_setopt($ch, CURLOPT_HTTP_VERSION,   CURL_HTTP_VERSION_1_1);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  'GET');
+    curl_setopt($ch, CURLOPT_HTTPGET,        true);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_FORBID_REUSE, true);
+    curl_setopt($ch, CURLOPT_HEADER,         true); # Include headers in response
+    curl_setopt($ch, CURLOPT_FORBID_REUSE,   true);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
-    curl_setopt($ch, CURLOPT_ENCODING , '');
-    curl_setopt($ch, CURLOPT_HTTPHEADER, $this->headers);
-    curl_setopt($ch, CURLOPT_USERAGENT, $this->useragent);
+    curl_setopt($ch, CURLOPT_ENCODING ,      '');
+    curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);
+    if (!empty($this->headers)) {
+      curl_setopt($ch, CURLOPT_HTTPHEADER,   $this->headers);
+    }
     #----
     if (preg_match('/^https:/', $url)) {
       if (empty($this->ca_file)) {
@@ -116,10 +149,10 @@ class curlMaster {
       if (!file_exists($this->ca_file)) {
         throw new Exception('Unable to read file '.$this->ca_file);
       }
-      curl_setopt($ch, CURLOPT_SSLVERSION, 6); # TLSv1.2
+      curl_setopt($ch, CURLOPT_SSLVERSION,     6); # TLSv1.2
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-      curl_setopt($ch, CURLOPT_CAINFO, $this->ca_file);
+      curl_setopt($ch, CURLOPT_CAINFO,         $this->ca_file);
     }
     #----
     $res = curl_exec($ch);
@@ -127,7 +160,13 @@ class curlMaster {
     #----
     if ($err == 0) { # Success
       curl_close($ch);
-      return $res;
+      if ($this->CacheResponse) {
+        file_put_contents($cacheFilename, $res);
+      }
+      return array(
+        'headers' => $this->getHeaders($res),
+        'body'    => $this->getBody($res),
+      );
     }
     if ($err == 6 && $this->loop_count <= $this->loop_limit) { # Couldn't resolve host
       sleep(1);
@@ -248,6 +287,19 @@ class curlMaster {
       return true;
     }
     return false;
+  }
+  #===================================================================
+
+  private function getHeaders($str) {
+    $str = explode("\r\n\r\n", $str);
+    return reset($str);
+  }
+
+  #===================================================================
+
+  private function getBody($str) {
+    $str = substr($str, strpos($str, "\r\n\r\n"));
+    return trim($str);
   }
 
   #===================================================================
