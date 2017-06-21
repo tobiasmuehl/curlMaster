@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.8 (2017-06-10 22:56:00 GMT)
+ * @version    0.9 (2017-06-19 22:29:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,12 +31,14 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '0.8';
+  const VERSION = '0.9';
 
   /**
-   * Response Caching.
+   * Force response caching.
    * This is useful when you expect the same response for each request,
-   * when debugging, when you cUrl an API with request limit.
+   * when:
+   *   -- debugging
+   *   -- you cURL an API with request limit
    * @var string
    */
   public $CacheResponse = false;
@@ -109,15 +111,14 @@ class curlMaster {
       throw new Exception('Illegal value argument url');
     }
     #----
+    $cacheFilename = '';
     if ($this->CacheResponse) {
       $this->PurgeCache();
-      $cacheFilename = $this->CacheDir .'/'. sha1($url . serialize($this->headers)) .'.curl';
-      if (file_exists($cacheFilename) && filemtime($cacheFilename) > (time() - $this->CacheMaxAge)) {
-        $res = file_get_contents($cacheFilename);
-        return array(
-          'headers' => $this->getHeaders($res),
-          'body'    => $this->getBody($res),
-        );
+      $ext = (string) $this->CacheMaxAge;
+      $cacheFilename = $this->CacheDir .'/CURL-'. sha1($url . serialize($this->headers)) .'.'. $ext;
+      if (file_exists($cacheFilename)) {
+        $str = file_get_contents($cacheFilename);
+        return json_decode($str, true);
       }
     }
     #----
@@ -134,8 +135,9 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  'GET');
     curl_setopt($ch, CURLOPT_HTTPGET,        true);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-    curl_setopt($ch, CURLOPT_HEADER,         true); # Include headers in response
+    curl_setopt($ch, CURLOPT_HEADER,         true);                  # Include headers in response
     curl_setopt($ch, CURLOPT_FORBID_REUSE,   true);
+    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);                  # Follow redirects
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
     curl_setopt($ch, CURLOPT_ENCODING ,      '');
     curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);
@@ -150,7 +152,7 @@ class curlMaster {
       if (!file_exists($this->ca_file)) {
         throw new Exception('Unable to read file '.$this->ca_file);
       }
-      curl_setopt($ch, CURLOPT_SSLVERSION,     6); # TLSv1.2
+      curl_setopt($ch, CURLOPT_SSLVERSION,     6);                   # TLSv1.2
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
       curl_setopt($ch, CURLOPT_CAINFO,         $this->ca_file);
@@ -161,13 +163,21 @@ class curlMaster {
     #----
     if ($err == 0) { # Success
       curl_close($ch);
-      if ($this->CacheResponse) {
-        file_put_contents($cacheFilename, $res);
-      }
-      return array(
-        'headers' => $this->getHeaders($res),
-        'body'    => $this->getBody($res),
+      $headers  = $this->getHeaders($res);
+      $body     = $this->getBody($res);
+      $status   = preg_replace('/^HTTP\/\d\.\d\ (\d{3})\ .+$/', '\\1', $headers['status']);
+      $filename = substr($cacheFilename, strlen($this->CacheDir));
+      $arr = array(
+        'headers'  => $headers,
+        'body'     => $body,
+        'status'   => $status,
+        'filename' => $filename,
       );
+      # Cache only if status 200
+      if ($status == '200') {
+        file_put_contents($cacheFilename, json_encode($arr, JSON_UNESCAPED_UNICODE));
+      }
+      return $arr;
     }
     if ($err == 6 && $this->loop_count <= $this->loop_limit) { # Couldn't resolve host
       sleep(1);
@@ -325,9 +335,41 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Purge cache
+   * Typical file name = /CURL-35b0deaf2469fd1c803a7c721905d9d28d46e91b.86400
+   * The extension signifies maximum age (caching time).
+   */
   public function PurgeCache() {
-    foreach (glob($this->CacheDir .'/*.curl') as $filename) {
-      if (filemtime($filename) < (time() - $this->CacheMaxAge)) {
+    foreach (glob($this->CacheDir .'/CURL-*') as $filename) {
+      $seconds = $this->MaxAge($filename);
+      if (filemtime($filename) < (time() - $seconds)) {
+        unlink($filename);
+      }
+    }
+  }
+
+  #===================================================================
+
+  /**
+   * File extension signifies maximum age (caching time).
+   *
+   */
+  private function MaxAge($str) {
+    if (strpos($str, '.') === false) {
+      throw new Exception('File has no extension');
+    }
+    $str = strrchr($str, '.');
+    $str = substr($str, 1);
+    return (integer) $str;
+  }
+
+  #===================================================================
+
+  public function DeleteChacheFile($filename) {
+    if (preg_match('/^\/CURL-[0-9a-f]{40}\.\d+$/', $filename)) {
+      $filename = $this->CacheDir . $filename;
+      if (file_exists($filename)) {
         unlink($filename);
       }
     }
