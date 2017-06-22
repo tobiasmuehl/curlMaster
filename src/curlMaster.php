@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    0.9 (2017-06-19 22:29:00 GMT)
+ * @version    1,0 (2017-06-22 10:39:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '0.9';
+  const VERSION = '1.0';
 
   /**
    * Force response caching.
@@ -174,7 +174,7 @@ class curlMaster {
         'filename' => $filename,
       );
       # Cache only if status 200
-      if ($status == '200') {
+      if ($this->CacheResponse && $status == '200') {
         file_put_contents($cacheFilename, json_encode($arr, JSON_UNESCAPED_UNICODE));
       }
       return $arr;
