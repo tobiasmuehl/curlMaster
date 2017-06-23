@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    1,0 (2017-06-22 10:39:00 GMT)
+ * @version    1.1 (2017-06-23 23:53:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '1.0';
+  const VERSION = '1.1';
 
   /**
    * Force response caching.
@@ -112,13 +112,24 @@ class curlMaster {
     }
     #----
     $cacheFilename = '';
+    $filename = '';
     if ($this->CacheResponse) {
       $this->PurgeCache();
       $ext = (string) $this->CacheMaxAge;
-      $cacheFilename = $this->CacheDir .'/CURL-'. sha1($url . serialize($this->headers)) .'.'. $ext;
+      $filename      = '/CURL-'. sha1($url . serialize($this->headers)) .'.'. $ext;
+      $cacheFilename = $this->CacheDir . $filename;
       if (file_exists($cacheFilename)) {
         $str = file_get_contents($cacheFilename);
         return json_decode($str, true);
+      }
+    }
+    #----
+    if (preg_match('/^https:/', $url)) {
+      if (empty($this->ca_file)) {
+        throw new Exception('Empty property ca_file');
+      }
+      if (!file_exists($this->ca_file)) {
+        throw new Exception('Unable to read file '.$this->ca_file);
       }
     }
     #----
@@ -146,12 +157,6 @@ class curlMaster {
     }
     #----
     if (preg_match('/^https:/', $url)) {
-      if (empty($this->ca_file)) {
-        throw new Exception('Empty property ca_file');
-      }
-      if (!file_exists($this->ca_file)) {
-        throw new Exception('Unable to read file '.$this->ca_file);
-      }
       curl_setopt($ch, CURLOPT_SSLVERSION,     6);                   # TLSv1.2
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
@@ -163,15 +168,16 @@ class curlMaster {
     #----
     if ($err == 0) { # Success
       curl_close($ch);
-      $headers  = $this->getHeaders($res);
-      $body     = $this->getBody($res);
-      $status   = preg_replace('/^HTTP\/\d\.\d\ (\d{3})\ .+$/', '\\1', $headers['status']);
-      $filename = substr($cacheFilename, strlen($this->CacheDir));
+      $headers = $this->getHeaders($res);
+      $body    = $this->getBody($res);
+      $status  = preg_replace('/^HTTP\/\d\.\d\ (\d{3})\ .+$/', '\\1', $headers['status']);
       $arr = array(
-        'headers'  => $headers,
-        'body'     => $body,
-        'status'   => $status,
-        'filename' => $filename,
+        'url'       => $url,
+        'useragent' => $useragent,
+        'headers'   => $headers,
+        'body'      => $body,
+        'status'    => $status,
+        'filename'  => $filename,
       );
       # Cache only if status 200
       if ($this->CacheResponse && $status == '200') {
