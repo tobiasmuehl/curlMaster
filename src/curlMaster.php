@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    1.1 (2017-06-23 23:53:00 GMT)
+ * @version    1.2 (2017-06-24 22:23:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '1.1';
+  const VERSION = '1.2';
 
   /**
    * Force response caching.
@@ -69,7 +69,7 @@ class curlMaster {
    * You can define your own user agent.
    * @var string
    */
-  public $useragent;
+  public $useragent = '';
 
   public $timeout_sec = 30;
 
@@ -173,7 +173,7 @@ class curlMaster {
       $status  = preg_replace('/^HTTP\/\d\.\d\ (\d{3})\ .+$/', '\\1', $headers['status']);
       $arr = array(
         'url'       => $url,
-        'useragent' => $useragent,
+        'useragent' => $this->useragent,
         'headers'   => $headers,
         'body'      => $body,
         'status'    => $status,
