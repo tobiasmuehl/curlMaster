@@ -36,7 +36,7 @@ if ($status != '200') {
 var_dump($response);
 
 /*
-array(6) {
+array(7) {
   ["url"]=>
   string(19) "https://github.com/"
   ["useragent"]=>
@@ -100,10 +100,12 @@ array(6) {
 
   </body>
 </html>"
-  ["status"]=>
-  string(3) "200"
   ["filename"]=>
   string(50) "/CURL-edea68cb9b64a35b80e914c7c49a9936f33c7b56.180"
+  ["exectime"]=>
+  string(3) "1.37 sec"
+  ["status"]=>
+  string(3) "200"
 }
 
 */

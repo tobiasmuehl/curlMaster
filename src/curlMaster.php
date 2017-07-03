@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    1.2 (2017-06-24 22:23:00 GMT)
+ * @version    1.3 (2017-07-03 23:36:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '1.2';
+  const VERSION = '1.3';
 
   /**
    * Force response caching.
@@ -102,6 +102,7 @@ class curlMaster {
   #===================================================================
 
   public function get_curl($url) {
+    $start = microtime(true);
     if (empty($this->loop_count)) {
       $this->loop_count = 0;
     }
@@ -176,8 +177,9 @@ class curlMaster {
         'useragent' => $this->useragent,
         'headers'   => $headers,
         'body'      => $body,
-        'status'    => $status,
         'filename'  => $filename,
+        'exectime'  => $this->benchmark($start),
+        'status'    => $status,
       );
       # Cache only if status 200
       if ($this->CacheResponse && $status == '200') {
@@ -379,6 +381,21 @@ class curlMaster {
         unlink($filename);
       }
     }
+  }
+
+  #===================================================================
+
+  private function benchmark($st) {
+    $val = (microtime(true) - $st);
+    if ($val >= 1) {
+      return number_format($val, 2, '.', ',').' sec';
+    }
+    $val = $val * 1000;
+    if ($val >= 1) {
+      return number_format($val, 2, '.', ',').' msec';
+    }
+    $val = $val * 1000;
+    return number_format($val, 2, '.', ',').' μsec';
   }
 
   #===================================================================
