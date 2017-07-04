@@ -24,10 +24,13 @@ $curlm->CacheMaxAge   = 180;
 # The URL you want to cURL
 $response = $curlm->get_curl('https://github.com/');
 
-$headers  = $response['headers'];
-$body     = $response['body'];
-$status   = $response['status'];
-$filename = $response['filename'];
+$url       = $response['url'];
+$useragent = $response['useragent'];
+$headers   = $response['headers'];
+$body      = $response['body'];
+$filename  = $response['filename'];
+$exectime  = $response['exectime'];
+$status    = $response['status'];
 
 if ($status != '200') {
   throw new Exception('HTTP request failed with status '.$status);
@@ -103,7 +106,7 @@ array(7) {
   ["filename"]=>
   string(50) "/CURL-edea68cb9b64a35b80e914c7c49a9936f33c7b56.180"
   ["exectime"]=>
-  string(3) "1.37 sec"
+  string(8) "1.37 sec"
   ["status"]=>
   string(3) "200"
 }
