@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    1.3 (2017-07-03 23:36:00 GMT)
+ * @version    1.4 (2017-07-09 04:36:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '1.3';
+  const VERSION = '1.4';
 
   /**
    * Force response caching.
@@ -143,7 +143,6 @@ class curlMaster {
       $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
     #----
-    curl_setopt($ch, CURLOPT_HTTP_VERSION,   CURL_HTTP_VERSION_1_1);
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  'GET');
     curl_setopt($ch, CURLOPT_HTTPGET,        true);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
