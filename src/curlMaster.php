@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    1.4 (2017-07-09 04:36:00 GMT)
+ * @version    2.0 (2017-07-10 03:39:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,23 +31,38 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '1.4';
+  const VERSION = '2.0';
 
   /**
-   * Force response caching.
-   * This is useful when you expect the same response for each request,
-   * when:
+   * Maximum age of forced cache (in seconds).
+   *
+   * Forced response caching (override).
+   * All responses are cached, but when this option is enabled (value > 0),
+   * caching will be forced regardless of the response headers.
+   * This is useful when you expect the same response for each
+   * request, when:
    *   -- debugging
    *   -- you cURL an API with request limit
-   * @var string
+   *
+   * @var integer .... value 0 disables forced caching
+   *                   value >0 enables forced caching
+   *
+   * NOTE: This caching time will be used ONLY if larger than response
+   * cache header value.
    */
-  public $CacheResponse = false;
+  public $ForcedCacheMaxAge = 0;
 
   /**
-   * Maximum age of chached responses (in seconds).
+   * Whether to enable cookies between sessions.
+   * @var boolean
+   */
+  public $EnableCookies = true;
+
+  /**
+   * Maximum age of cached cookies (in seconds).
    * @var integer
    */
-  public $CacheMaxAge = 86400;
+  public $CookieMaxAge = 604800;
 
   /**
    * Cache directory
@@ -69,7 +84,7 @@ class curlMaster {
    * You can define your own user agent.
    * @var string
    */
-  public $useragent = '';
+  public $useragent   = '';
 
   public $timeout_sec = 30;
 
@@ -111,20 +126,17 @@ class curlMaster {
     if (!$this->validateUrl($url)) {
       throw new Exception('Illegal value argument url');
     }
-    #----
-    $cacheFilename = '';
-    $filename = '';
-    if ($this->CacheResponse) {
-      $this->PurgeCache();
-      $ext = (string) $this->CacheMaxAge;
-      $filename      = '/CURL-'. sha1($url . serialize($this->headers)) .'.'. $ext;
-      $cacheFilename = $this->CacheDir . $filename;
-      if (file_exists($cacheFilename)) {
-        $str = file_get_contents($cacheFilename);
+    ########################################################
+    $this->PurgeCache();
+    $filenameHash = sha1($url . serialize($this->headers));
+    foreach (glob($this->CacheDir .'/CURL_RESPON-*') as $cfile) {
+      $temp = substr($cfile, 12, 40);
+      if ($filenameHash == $temp) {
+        $str = file_get_contents($cfile);
         return json_decode($str, true);
       }
     }
-    #----
+    ########################################################
     if (preg_match('/^https:/', $url)) {
       if (empty($this->ca_file)) {
         throw new Exception('Empty property ca_file');
@@ -152,6 +164,14 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
     curl_setopt($ch, CURLOPT_ENCODING ,      '');
     curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);
+    #----
+    $cookieFile = '';
+    if ($this->EnableCookies) {
+      $cookieFile = $this->GetCookieFileName($url);
+      curl_setopt($ch, CURLOPT_COOKIEJAR,    $cookieFile);
+      curl_setopt($ch, CURLOPT_COOKIEFILE,   $cookieFile);
+    }
+    #----
     if (!empty($this->headers)) {
       curl_setopt($ch, CURLOPT_HTTPHEADER,   $this->headers);
     }
@@ -172,22 +192,37 @@ class curlMaster {
       $body    = $this->getBody($res);
       $status  = preg_replace('/^HTTP\/\d\.\d\ (\d{3})\ .+$/', '\\1', $headers['status']);
       $arr = array(
-        'url'       => $url,
-        'useragent' => $this->useragent,
-        'headers'   => $headers,
-        'body'      => $body,
-        'filename'  => $filename,
-        'exectime'  => $this->benchmark($start),
-        'status'    => $status,
+        'url'        => $url,
+        'useragent'  => $this->useragent,
+        'headers'    => $headers,
+        'body'       => $body,
+        'filename'   => '',
+        'exectime'   => '',
+        'cookiefile' => $cookieFile,
+        'status'     => $status,
       );
+      ######################################################
       # Cache only if status 200
-      if ($this->CacheResponse && $status == '200') {
-        file_put_contents($cacheFilename, json_encode($arr, JSON_UNESCAPED_UNICODE));
+      if ($status == '200') {
+        $cacheTime = $this->ParseCachingHeader($headers);
+        if (!empty($this->ForcedCacheMaxAge) && $this->ForcedCacheMaxAge > $cacheTime) {
+          $cacheTime = $this->ForcedCacheMaxAge;
+        }
+        if ($cacheTime > 0) {
+          $ext = (string) $cacheTime;
+          $filename = '/CURL_RESPON-'. $filenameHash .'.'. $ext;
+          $arr['filename'] = $filename;
+          $arr['exectime'] = $this->benchmark($start);
+          file_put_contents($this->CacheDir . $filename, json_encode($arr, JSON_UNESCAPED_UNICODE));
+          return $arr;
+        }
       }
+      ######################################################
+      $arr['exectime'] = $this->benchmark($start);
       return $arr;
     }
     if ($err == 6 && $this->loop_count <= $this->loop_limit) { # Couldn't resolve host
-      sleep(1);
+      usleep(500000);
       return $this->get_curl($url);
     }
     #----
@@ -209,18 +244,166 @@ class curlMaster {
 
   #===================================================================
 
+  private function validateUrl($url) {
+    if (preg_match('#^https?://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*(:\d{1,5})?/\S*$#', $url)) {
+      return true;
+    }
+    return false;
+  }
+  #===================================================================
+
+  private function getHeaders($str) {
+    $str = explode("\r\n\r\n", $str);
+    $str = reset($str);
+    $str = explode("\r\n", $str);
+    $new = array();
+    $s = 1;
+    foreach ($str as $line) {
+      $pos = strpos($line, ': ');
+      if ($pos !== false) {
+        $key = strtolower(substr($line, 0, $pos));
+        if (!isset($new[$key])) {
+          $new[$key] = preg_replace('/\s+/', ' ', trim(substr($line, $pos+1)));
+        }
+        else {
+          $new[$key.'-'.$s] = preg_replace('/\s+/', ' ', trim(substr($line, $pos+1)));
+          $s++;
+        }
+      }
+      else {
+        $new['status'] = $line; # HTTP/1.1 200 OK
+      }
+    }
+    return $new;
+  }
+
+  #===================================================================
+
+  private function getBody($str) {
+    $str = substr($str, strpos($str, "\r\n\r\n"));
+    return trim($str);
+  }
+
+  #===================================================================
+
+  /**
+   * Parses the response headers and returns the number of seconds
+   * that will be the maximum caching time of our cached file.
+   *
+   */
+  private function ParseCachingHeader($arr) {
+    #--------------------------------------
+    if (!empty($arr['cache-control'])) {
+      if (strpos('no-cache', $arr['cache-control']) !== false) {
+        return 0;
+      }
+      if (strpos('no-store', $arr['cache-control']) !== false) {
+        return 0;
+      }
+      if (strpos('max-age=0', $arr['cache-control']) !== false) {
+        return 0;
+      }
+      if (preg_match('/\bmax-age=(\d+),?\b/', $arr['cache-control'], $match)) {
+        return (integer) $match[1];
+      }
+    }
+    #--------------------------------------
+    if (!empty($arr['expires'])) {
+      if (preg_match('/^-\d+|0$/', $arr['expires'])) {
+        return 0;
+      }
+      $epoch = strtotime($arr['expires']);
+      $sec = $epoch - time();
+      if ($sec > 0) {
+        return $sec;
+      }
+      return 0;
+    }
+    #--------------------------------------
+    return 0;
+  }
+
+  #===================================================================
+
+  /**
+   * Purge cache
+   * Typical file names:
+   *     cached response ..... /CURL_RESPON-35b0deaf2469fd1c803a7c721905d9d28d46e91b.86400
+   *     cookie file ......... /CURL_COOKIE-35b0deaf2469fd1c803a7c721905d9d28d46e91b.86400
+   * The extension signifies maximum age (caching time).
+   */
+  public function PurgeCache() {
+    foreach (glob($this->CacheDir .'/CURL_*') as $filename) {
+      $seconds = $this->MaxAge($filename);
+      if (filemtime($filename) < (time() - $seconds)) {
+        unlink($filename);
+      }
+    }
+  }
+
+  #===================================================================
+
+  private function GetCookieFileName($url) {
+    $temp = parse_url($url);
+    $ext  = (string) $this->CookieMaxAge;
+    return $this->CacheDir .'/CURL_COOKIE-'. sha1($temp['host']) .'.'. $ext;
+  }
+
+  #===================================================================
+
+  /**
+   * File extension signifies maximum age (caching time).
+   *
+   */
+  private function MaxAge($str) {
+    if (strpos($str, '.') === false) {
+      throw new Exception('File has no extension');
+    }
+    $str = strrchr($str, '.');
+    $str = substr($str, 1);
+    return (integer) $str;
+  }
+
+  #===================================================================
+
+  public function DeleteChacheFile($filename) {
+    if (preg_match('/^\/CURL_RESPON-[0-9a-f]{40}\.\d+$/', $filename)) {
+      $filename = $this->CacheDir . $filename;
+      if (file_exists($filename)) {
+        unlink($filename);
+      }
+    }
+  }
+
+  #===================================================================
+
+  private function benchmark($st) {
+    $val = (microtime(true) - $st);
+    if ($val >= 1) {
+      return number_format($val, 2, '.', ',').' sec';
+    }
+    $val = $val * 1000;
+    if ($val >= 1) {
+      return number_format($val, 2, '.', ',').' msec';
+    }
+    $val = $val * 1000;
+    return number_format($val, 2, '.', ',').' μsec';
+  }
+
+  #===================================================================
+
   private function curlErrorCode($n) {
     $code = array (
-      0 => 'CURLE_OK',
-      1 => 'CURLE_UNSUPPORTED_PROTOCOL',
-      2 => 'CURLE_FAILED_INIT',
-      3 => 'CURLE_URL_MALFORMAT',
-      4 => 'CURLE_NOT_BUILT_IN',
-      5 => 'CURLE_COULDNT_RESOLVE_PROXY',
-      6 => 'CURLE_COULDNT_RESOLVE_HOST',
-      7 => 'CURLE_COULDNT_CONNECT',
-      8 => 'CURLE_FTP_WEIRD_SERVER_REPLY',
-      9 => 'CURLE_REMOTE_ACCESS_DENIED',
+      0  => 'CURLE_OK',
+      1  => 'CURLE_UNSUPPORTED_PROTOCOL',
+      2  => 'CURLE_FAILED_INIT',
+      3  => 'CURLE_URL_MALFORMAT',
+      4  => 'CURLE_NOT_BUILT_IN',
+      5  => 'CURLE_COULDNT_RESOLVE_PROXY',
+      6  => 'CURLE_COULDNT_RESOLVE_HOST',
+      7  => 'CURLE_COULDNT_CONNECT',
+      8  => 'CURLE_FTP_WEIRD_SERVER_REPLY',
+      9  => 'CURLE_REMOTE_ACCESS_DENIED',
       10 => 'CURLE_FTP_ACCEPT_FAILED',
       11 => 'CURLE_FTP_WEIRD_PASS_REPLY',
       12 => 'CURLE_FTP_ACCEPT_TIMEOUT',
@@ -296,105 +479,6 @@ class curlMaster {
       return $code[$n];
     }
     throw new Exception('Invalid argument n='.$n);
-  }
-
-  #===================================================================
-
-  private function validateUrl($url) {
-    if (preg_match('#^https?://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*(:\d{1,5})?/\S*$#', $url)) {
-      return true;
-    }
-    return false;
-  }
-  #===================================================================
-
-  private function getHeaders($str) {
-    $str = explode("\r\n\r\n", $str);
-    $str = reset($str);
-    $str = explode("\r\n", $str);
-    $new = array();
-    $s = 1;
-    foreach ($str as $line) {
-      $pos = strpos($line, ': ');
-      if ($pos !== false) {
-        $key = strtolower(substr($line, 0, $pos));
-        if (!isset($new[$key])) {
-          $new[$key] = preg_replace('/\s+/', ' ', trim(substr($line, $pos+1)));
-        }
-        else {
-          $new[$key.'-'.$s] = preg_replace('/\s+/', ' ', trim(substr($line, $pos+1)));
-          $s++;
-        }
-      }
-      else {
-        $new['status'] = $line; # HTTP/1.1 200 OK
-      }
-    }
-    return $new;
-  }
-
-  #===================================================================
-
-  private function getBody($str) {
-    $str = substr($str, strpos($str, "\r\n\r\n"));
-    return trim($str);
-  }
-
-  #===================================================================
-
-  /**
-   * Purge cache
-   * Typical file name = /CURL-35b0deaf2469fd1c803a7c721905d9d28d46e91b.86400
-   * The extension signifies maximum age (caching time).
-   */
-  public function PurgeCache() {
-    foreach (glob($this->CacheDir .'/CURL-*') as $filename) {
-      $seconds = $this->MaxAge($filename);
-      if (filemtime($filename) < (time() - $seconds)) {
-        unlink($filename);
-      }
-    }
-  }
-
-  #===================================================================
-
-  /**
-   * File extension signifies maximum age (caching time).
-   *
-   */
-  private function MaxAge($str) {
-    if (strpos($str, '.') === false) {
-      throw new Exception('File has no extension');
-    }
-    $str = strrchr($str, '.');
-    $str = substr($str, 1);
-    return (integer) $str;
-  }
-
-  #===================================================================
-
-  public function DeleteChacheFile($filename) {
-    if (preg_match('/^\/CURL-[0-9a-f]{40}\.\d+$/', $filename)) {
-      $filename = $this->CacheDir . $filename;
-      if (file_exists($filename)) {
-        unlink($filename);
-      }
-    }
-  }
-
-  #===================================================================
-
-  private function benchmark($st) {
-    $val = (microtime(true) - $st);
-    if ($val >= 1) {
-      return number_format($val, 2, '.', ',').' sec';
-    }
-    $val = $val * 1000;
-    if ($val >= 1) {
-      return number_format($val, 2, '.', ',').' msec';
-    }
-    $val = $val * 1000;
-    return number_format($val, 2, '.', ',').' μsec';
   }
 
   #===================================================================

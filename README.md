@@ -13,24 +13,22 @@ $curlm = new curlMaster;
 $curlm->ca_file = '/srv/certs/ca-bundle.crt';
 
 # If you need to set User Agent...
-$curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:56.0) Gecko/20100101 Firefox/56.0';
+$curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0';
 
-# Optional forced caching
-$curlm->CacheResponse = true;
-
-# Specify caching time in seconds
-$curlm->CacheMaxAge   = 180;
+# Specify caching time in seconds to force override of any caching headers.
+$curlm->ForcedCacheMaxAge = 3600;
 
 # The URL you want to cURL
 $response = $curlm->get_curl('https://github.com/');
 
-$url       = $response['url'];
-$useragent = $response['useragent'];
-$headers   = $response['headers'];
-$body      = $response['body'];
-$filename  = $response['filename'];
-$exectime  = $response['exectime'];
-$status    = $response['status'];
+$url        = $response['url'];
+$useragent  = $response['useragent'];
+$headers    = $response['headers'];
+$body       = $response['body'];
+$filename   = $response['filename'];
+$cookiefile = $response['cookiefile'];
+$exectime   = $response['exectime'];
+$status     = $response['status'];
 
 if ($status != '200') {
   throw new Exception('HTTP request failed with status '.$status);
@@ -39,17 +37,17 @@ if ($status != '200') {
 var_dump($response);
 
 /*
-array(7) {
+array(8) {
   ["url"]=>
   string(19) "https://github.com/"
   ["useragent"]=>
-  string(82) "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:56.0) Gecko/20100101 Firefox/56.0"
+  string(82) "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0"
   ["headers"]=>
   array(23) {
     ["status"]=>
     string(15) "HTTP/1.1 200 OK"
     ["date"]=>
-    string(29) "Sat, 24 Jun 2017 23:21:39 GMT"
+    string(29) "Mon, 10 Jul 2017 01:34:45 GMT"
     ["content-type"]=>
     string(24) "text/html; charset=utf-8"
     ["transfer-encoding"]=>
@@ -65,13 +63,13 @@ array(7) {
     ["x-ua-compatible"]=>
     string(16) "IE=Edge,chrome=1"
     ["set-cookie"]=>
-    string(99) "logged_in=no; domain=.github.com; path=/; expires=Wed, 24 Jun 2037 23:21:39 -0000; secure; HttpOnly"
+    string(99) "logged_in=no; domain=.github.com; path=/; expires=Fri, 10 Jul 2037 01:34:45 -0000; secure; HttpOnly"
     ["set-cookie-2"]=>
-    string(277) "_gh_sess=eyJzZXNzaW9uX2lkIjoiNWJjNzc4YzFlYzdhYTVhNDc1MzM0OGY2ODI1OTE1YjciLCJsYXN0X3JlYWRfZnJvbV9yZXBsaWNhcyI6MTQ5ODM0NjQ5OTQyMCwiX2NzcmZfdG9rZW4iOiJLRG9DUXBjQzJyUVhzdHV3NmFKamR3aVlHUkgwYUhIRC8zTy9tdnRhcFA0PSJ9--0dd38afc9a0dbaed509e890ccdabef195efac16b; path=/; secure; HttpOnly"
+    string(277) "_gh_sess=eyJzZXNzaW9uX2lkIjoiNTdkOTYxMTk4YWJjMmFjMDUxYjQ0OThhNzk2MmY3NjgiLCJsYXN0X3JlYWRfZnJvbV9yZXBsaWNhcyI6MTQ5OTY1MDQ4NTE2OCwiX2NzcmZfdG9rZW4iOiJKc01pOHNmQ2dPRTZYTzZnT244cEU5VHZ2K3pKV2puamVtWlVoQW84NHAwPSJ9--4fde405b50324c9aaa72f01ef1f41a54b2db6fda; path=/; secure; HttpOnly"
     ["x-request-id"]=>
-    string(32) "2b79471e821d261397c98996382fcf01"
+    string(32) "42b939977b0e7b6935e506691885610d"
     ["x-runtime"]=>
-    string(8) "0.060952"
+    string(8) "0.064948"
     ["content-security-policy"]=>
     string(770) "default-src 'none'; base-uri 'self'; child-src render.githubusercontent.com; connect-src 'self' uploads.github.com status.github.com collector.githubapp.com api.github.com www.google-analytics.com github-cloud.s3.amazonaws.com github-production-repository-file-5c1aeb.s3.amazonaws.com github-production-upload-manifest-file-7fdce7.s3.amazonaws.com github-production-user-asset-6210df.s3.amazonaws.com wss://live.github.com; font-src assets-cdn.github.com; form-action 'self' github.com gist.github.com; frame-ancestors 'none'; img-src 'self' data: assets-cdn.github.com identicons.github.com collector.githubapp.com github-cloud.s3.amazonaws.com *.githubusercontent.com; media-src 'none'; script-src assets-cdn.github.com; style-src 'unsafe-inline' assets-cdn.github.com"
     ["strict-transport-security"]=>
@@ -85,32 +83,32 @@ array(7) {
     ["x-xss-protection"]=>
     string(13) "1; mode=block"
     ["x-runtime-rack"]=>
-    string(8) "0.066299"
+    string(8) "0.071398"
     ["content-encoding"]=>
     string(4) "gzip"
     ["vary-3"]=>
     string(15) "Accept-Encoding"
     ["x-github-request-id"]=>
-    string(35) "B348:28EF0:620E5BB:9347860:594EF402"
+    string(35) "0626:1FAF0:27D3566:3CDF102:5962D9B4"
   }
   ["body"]=>
-  string(98950) "<!DOCTYPE html>
+  string(54932) "<!DOCTYPE html>
 <html lang="en">
   <head>
-    <meta charset="utf-8">
 
   ... TRUNCATED
 
   </body>
 </html>"
   ["filename"]=>
-  string(50) "/CURL-edea68cb9b64a35b80e914c7c49a9936f33c7b56.180"
+  string(59) "/CURL_RESPON-edea68cb9b64a35b80e914c7c49a9936f33c7b56.3600"
   ["exectime"]=>
-  string(8) "1.37 sec"
+  string(8) "1.83 sec"
+  ["cookiefile"]=>
+  string(69) "/srv/cache/CURL_COOKIE-c2208abde9668e8e9815c3690855edd1e63abeac.86400"
   ["status"]=>
   string(3) "200"
 }
-
 */
 ```
 
