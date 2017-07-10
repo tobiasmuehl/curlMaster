@@ -1,7 +1,7 @@
 {
     "name": "peterkahl/curl-master",
     "type": "library",
-    "description": "Lightweight cURL wrapper.",
+    "description": "Simple cURL wrapper with response caching and cookie storage.",
     "keywords": ["curl", "http-client", "http", "https"],
     "homepage": "https://github.com/peterkahl/curlMaster",
     "license": "Apache License Version 2.0",

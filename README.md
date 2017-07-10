@@ -1,6 +1,6 @@
 # curlMaster
 
-Simple curl wrapper. At the moment only method GET.
+Simple curl wrapper with response caching and cookie storage.
 
 ## Usage
 
