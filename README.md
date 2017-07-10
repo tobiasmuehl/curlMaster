@@ -29,6 +29,7 @@ $filename   = $response['filename'];
 $cookiefile = $response['cookiefile'];
 $exectime   = $response['exectime'];
 $status     = $response['status'];
+$origin     = $response['origin'];
 
 if ($status != '200') {
   throw new Exception('HTTP request failed with status '.$status);
@@ -101,13 +102,15 @@ array(8) {
   </body>
 </html>"
   ["filename"]=>
-  string(59) "/CURL_RESPON-edea68cb9b64a35b80e914c7c49a9936f33c7b56.3600"
+  string(58) "/CURL_RESPON-95e60e0de85c2363212e4714d376d2a64b03b6b4.3600"
   ["exectime"]=>
-  string(8) "1.83 sec"
+  string(8) "1.16 sec"
   ["cookiefile"]=>
-  string(69) "/srv/cache/CURL_COOKIE-c2208abde9668e8e9815c3690855edd1e63abeac.86400"
+  string(70) "/srv/cache/CURL_COOKIE-c2208abde9668e8e9815c3690855edd1e63abeac.604800"
   ["status"]=>
   string(3) "200"
+  ["origin"]=>
+  string(5) "cache"
 }
 */
 ```

@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    2.0 (2017-07-10 03:39:00 GMT)
+ * @version    2.1 (2017-07-10 04:01:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '2.0';
+  const VERSION = '2.1';
 
   /**
    * Maximum age of forced cache (in seconds).
@@ -126,14 +126,21 @@ class curlMaster {
     if (!$this->validateUrl($url)) {
       throw new Exception('Illegal value argument url');
     }
+    #----
+    if (empty($this->useragent)) {
+      $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
+    }
     ########################################################
     $this->PurgeCache();
-    $filenameHash = sha1($url . serialize($this->headers));
+    $filenameHash = sha1($url . serialize($this->headers) . $this->useragent);
     foreach (glob($this->CacheDir .'/CURL_RESPON-*') as $cfile) {
-      $temp = substr($cfile, 12, 40);
+      $temp = str_replace($this->CacheDir, '', $cfile);
+      $temp = substr($temp, 13, 40);
       if ($filenameHash == $temp) {
         $str = file_get_contents($cfile);
-        return json_decode($str, true);
+        $arr = json_decode($str, true);
+        $arr['origin'] = 'cache';
+        return $arr;
       }
     }
     ########################################################
@@ -149,10 +156,6 @@ class curlMaster {
     $ch = curl_init($url);
     if ($ch == false) {
       return false;
-    }
-    #----
-    if (empty($this->useragent)) {
-      $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
     #----
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  'GET');
@@ -200,6 +203,7 @@ class curlMaster {
         'exectime'   => '',
         'cookiefile' => $cookieFile,
         'status'     => $status,
+        'origin'     => 'new',
       );
       ######################################################
       # Cache only if status 200
