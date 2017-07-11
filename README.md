@@ -15,7 +15,21 @@ $curlm->ca_file = '/srv/certs/ca-bundle.crt';
 # If you need to set User Agent...
 $curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0';
 
-# Specify caching time in seconds to force override of any caching headers.
+/**
+ * Caching control & Maximum age of forced cache (in seconds).
+ *
+ * All responses are cached, but when this value is > 0, caching
+ * will be forced regardless of the response headers.
+ * Forced caching is useful when you expect the same response for each
+ * request or when:
+ *   -- debugging
+ *   -- you cURL an API with request limit
+ *
+ * @var integer .... value 0 disables forced caching while header-dependent caching is still on
+ *                   value >0 enables forced caching and overrides header-dependent caching
+ *                   value <0 disables caching altogether (example -1)
+ *
+ */
 $curlm->ForcedCacheMaxAge = 3600;
 
 # The URL you want to cURL
@@ -104,7 +118,7 @@ array(8) {
   ["filename"]=>
   string(58) "/CURL_RESPON-95e60e0de85c2363212e4714d376d2a64b03b6b4.3600"
   ["exectime"]=>
-  string(8) "1.16 sec"
+  string(8) "1.16 msec"
   ["cookiefile"]=>
   string(70) "/srv/cache/CURL_COOKIE-c2208abde9668e8e9815c3690855edd1e63abeac.604800"
   ["status"]=>

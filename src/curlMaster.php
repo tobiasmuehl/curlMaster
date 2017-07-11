@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    2.2 (2017-07-11 00:03:00 GMT)
+ * @version    2.3 (2017-07-11 09:09:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,24 +31,22 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '2.2';
+  const VERSION = '2.3';
 
   /**
-   * Maximum age of forced cache (in seconds).
+   * Caching control & Maximum age of forced cache (in seconds).
    *
-   * Forced response caching (override).
-   * All responses are cached, but when this option is enabled (value > 0),
-   * caching will be forced regardless of the response headers.
-   * This is useful when you expect the same response for each
-   * request, when:
+   * All responses are cached, but when this value is > 0, caching
+   * will be forced regardless of the response headers.
+   * Forced caching is useful when you expect the same response for each
+   * request or when:
    *   -- debugging
    *   -- you cURL an API with request limit
    *
-   * @var integer .... value 0 disables forced caching
-   *                   value >0 enables forced caching
+   * @var integer .... value 0 disables forced caching while header-dependent caching is still on
+   *                   value >0 enables forced caching and overrides header-dependent caching
+   *                   value <0 disables caching altogether (example -1)
    *
-   * NOTE: This caching time will be used ONLY if larger than response
-   * cache header value.
    */
   public $ForcedCacheMaxAge = 0;
 
@@ -128,17 +126,19 @@ class curlMaster {
       $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
     ########################################################
-    $this->PurgeCache();
-    $filenameHash = sha1($url . serialize($this->headers) . $this->useragent);
-    foreach (glob($this->CacheDir .'/CURL_RESPON-*') as $cfile) {
-      $temp = str_replace($this->CacheDir, '', $cfile);
-      $temp = substr($temp, 13, 40);
-      if ($filenameHash == $temp) {
-        $str = file_get_contents($cfile);
-        $arr = json_decode($str, true);
-        $arr['origin']   = 'cache';
-        $arr['exectime'] = $this->benchmark($start);
-        return $arr;
+    if ($this->ForcedCacheMaxAge > -1) {
+      $this->PurgeCache();
+      $filenameHash = sha1($url . serialize($this->headers) . $this->useragent);
+      foreach (glob($this->CacheDir .'/CURL_RESPON-*') as $cfile) {
+        $temp = str_replace($this->CacheDir, '', $cfile);
+        $temp = substr($temp, 13, 40);
+        if ($filenameHash == $temp) {
+          $str = file_get_contents($cfile);
+          $arr = json_decode($str, true);
+          $arr['origin']   = 'cache';
+          $arr['exectime'] = $this->benchmark($start);
+          return $arr;
+        }
       }
     }
     ########################################################
@@ -205,7 +205,7 @@ class curlMaster {
       );
       ######################################################
       # Cache only if status 200
-      if ($status == '200') {
+      if ($status == '200' && $this->ForcedCacheMaxAge > -1) {
         $cacheTime = $this->ParseCachingHeader($headers);
         if (!empty($this->ForcedCacheMaxAge) && $this->ForcedCacheMaxAge > $cacheTime) {
           $cacheTime = $this->ForcedCacheMaxAge;
