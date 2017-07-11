@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    2.1 (2017-07-10 04:01:00 GMT)
+ * @version    2.2 (2017-07-11 00:03:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '2.1';
+  const VERSION = '2.2';
 
   /**
    * Maximum age of forced cache (in seconds).
@@ -100,28 +100,25 @@ class curlMaster {
    * @var array
    * Example ... array('Connection: Close', 'X-API-Key: 7KgvBPUXh_XKQAMG');
    */
-  public $headers;
+  public $headers = array();
 
   /**
    * The loop is used for DNS timeout.
    * @var integer
    */
-  private $loop_count;
+  private $LoopCount = 0;
 
   /**
    * The loop is used for DNS timeout.
    * @var integer
    */
-  private $loop_limit = 20;
+  private $LoopLimit = 20;
 
   #===================================================================
 
   public function get_curl($url) {
     $start = microtime(true);
-    if (empty($this->loop_count)) {
-      $this->loop_count = 0;
-    }
-    $this->loop_count++;
+    $this->LoopCount++;
     #----
     if (!$this->validateUrl($url)) {
       throw new Exception('Illegal value argument url');
@@ -139,7 +136,8 @@ class curlMaster {
       if ($filenameHash == $temp) {
         $str = file_get_contents($cfile);
         $arr = json_decode($str, true);
-        $arr['origin'] = 'cache';
+        $arr['origin']   = 'cache';
+        $arr['exectime'] = $this->benchmark($start);
         return $arr;
       }
     }
@@ -225,7 +223,7 @@ class curlMaster {
       $arr['exectime'] = $this->benchmark($start);
       return $arr;
     }
-    if ($err == 6 && $this->loop_count <= $this->loop_limit) { # Couldn't resolve host
+    if ($err == 6 && $this->LoopCount <= $this->LoopLimit) { # Couldn't resolve host
       usleep(500000);
       return $this->get_curl($url);
     }
@@ -235,14 +233,14 @@ class curlMaster {
     if (!$this->debug) {
       return false;
     }
-    throw new Exception('CURL ERROR No. '.$err.'. Details are --'                              . PHP_EOL . PHP_EOL .
-    str_pad('ERROR ',              22, '.', STR_PAD_RIGHT) .' '. $this->curlErrorCode($err)    . PHP_EOL .
-    str_pad('Loop Count ',         22, '.', STR_PAD_RIGHT) .' '. $this->loop_count             . PHP_EOL .
-    str_pad('URL ',                22, '.', STR_PAD_RIGHT) .' '. $info['url']                  . PHP_EOL .
-    str_pad('HTTP Code ',          22, '.', STR_PAD_RIGHT) .' '. $info['http_code']            . PHP_EOL .
-    str_pad('Connect Time ',       22, '.', STR_PAD_RIGHT) .' '. $info['connect_time']         . PHP_EOL .
-    str_pad('Total Time ',         22, '.', STR_PAD_RIGHT) .' '. $info['total_time']           . PHP_EOL .
-    str_pad('Name Lookup Time ',   22, '.', STR_PAD_RIGHT) .' '. $info['namelookup_time']      . PHP_EOL
+    throw new Exception('CURL ERROR No. '.$err.'. Details are --'                         . PHP_EOL . PHP_EOL .
+      str_pad('ERROR ',            22, '.', STR_PAD_RIGHT) .' '. $this->curlErrorCode($err) . PHP_EOL .
+      str_pad('Loop Count ',       22, '.', STR_PAD_RIGHT) .' '. $this->LoopCount           . PHP_EOL .
+      str_pad('URL ',              22, '.', STR_PAD_RIGHT) .' '. $info['url']               . PHP_EOL .
+      str_pad('HTTP Code ',        22, '.', STR_PAD_RIGHT) .' '. $info['http_code']         . PHP_EOL .
+      str_pad('Connect Time ',     22, '.', STR_PAD_RIGHT) .' '. $info['connect_time']      . PHP_EOL .
+      str_pad('Total Time ',       22, '.', STR_PAD_RIGHT) .' '. $info['total_time']        . PHP_EOL .
+      str_pad('Name Lookup Time ', 22, '.', STR_PAD_RIGHT) .' '. $info['namelookup_time']   . PHP_EOL
     );
   }
 
@@ -254,6 +252,7 @@ class curlMaster {
     }
     return false;
   }
+
   #===================================================================
 
   private function getHeaders($str) {
@@ -482,7 +481,7 @@ class curlMaster {
     if (array_key_exists($n, $code)) {
       return $code[$n];
     }
-    throw new Exception('Invalid argument n='.$n);
+    return '';
   }
 
   #===================================================================
