@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.0 (2017-07-14 09:21:00 GMT)
+ * @version    3.1 (2017-07-14 11:16:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.0';
+  const VERSION = '3.1';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -180,11 +180,13 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  $method);
     if ($method == 'GET') {
       curl_setopt($ch, CURLOPT_HTTPGET,        true);
+      curl_setopt($ch, CURLOPT_ENCODING ,      '');
     }
     elseif ($method == 'POST') {
       $postStr = $this->Array2string($data);
       curl_setopt($ch, CURLOPT_POST,           count($data));
       curl_setopt($ch, CURLOPT_POSTFIELDS,     $postStr);
+      curl_setopt($ch, CURLOPT_ENCODING ,      '');
     }
     #----
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -192,7 +194,6 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_FORBID_REUSE,   true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);                  # Follow redirects
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
-    curl_setopt($ch, CURLOPT_ENCODING ,      '');
     curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);
     #----
     if ($this->EnableCookies) {
