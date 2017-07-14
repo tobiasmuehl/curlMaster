@@ -36,7 +36,7 @@ $curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Geck
 $curlm->ForcedCacheMaxAge = 3600;
 
 # The URL you want to cURL (method GET)
-$response = $curlm->get_curl('https://github.com/');
+$response = $curlm->Request('https://github.com/');
 
 $url        = $response['url'];
 $metod      = $response['method'];
@@ -160,7 +160,7 @@ $data = array(
 );
 
 # The URL you want to cURL
-$response = $curlm->get_curl('https://github.com/', 'POST', $data);
+$response = $curlm->Request('https://whatever.anything/login', 'POST', $data);
 
 ```
 
@@ -172,6 +172,9 @@ Although the cache is being purged automatically, you may want to purge the cach
 use peterkahl\curlMaster\curlMaster;
 
 $curlm = new curlMaster;
+
+# Set the cache directory
+$curlm->CacheDir = '/var/www/cache';
 
 $curlm->PurgeCache();
 ```
