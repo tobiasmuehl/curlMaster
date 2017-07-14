@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.1 (2017-07-14 11:16:00 GMT)
+ * @version    3.2 (2017-07-14 23:25:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.1';
+  const VERSION = '3.2';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -256,7 +256,7 @@ class curlMaster {
     }
     if ($err == 6 && $this->LoopCount <= $this->LoopLimit) { # Couldn't resolve host
       usleep(500000);
-      return $this->get_curl($url);
+      return $this->Request($url, $method, $data);
     }
     #----
     $info = curl_getinfo($ch);
