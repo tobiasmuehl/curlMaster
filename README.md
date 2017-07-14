@@ -1,15 +1,18 @@
 # curlMaster
 
-Simple curl wrapper with response caching and cookie storage.
+cURL wrapper with response caching and cookie storage, methods GET, POST, HEAD.
 
-## Usage
+## Usage example, method GET:
 
 ```php
 use peterkahl\curlMaster\curlMaster;
 
 $curlm = new curlMaster;
 
-# Specify location of CA certificate file
+# Set the cache directory
+$curlm->CacheDir = '/var/www/cache';
+
+# If you want to use SSL/TLS, you need to set the location of CA certificate file.
 $curlm->ca_file = '/srv/certs/ca-bundle.crt';
 
 # If you need to set User Agent...
@@ -32,10 +35,12 @@ $curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Geck
  */
 $curlm->ForcedCacheMaxAge = 3600;
 
-# The URL you want to cURL
+# The URL you want to cURL (method GET)
 $response = $curlm->get_curl('https://github.com/');
 
 $url        = $response['url'];
+$metod      = $response['method'];
+$req_data   = $response['req_data'];
 $useragent  = $response['useragent'];
 $headers    = $response['headers'];
 $body       = $response['body'];
@@ -52,17 +57,21 @@ if ($status != '200') {
 var_dump($response);
 
 /*
-array(8) {
+array(11) {
   ["url"]=>
   string(19) "https://github.com/"
+  ["method"]=>
+  string(3) "GET"
+  ["req_data"]=>
+  string(0) ""
   ["useragent"]=>
   string(82) "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0"
   ["headers"]=>
-  array(23) {
+  array(22) {
     ["status"]=>
     string(15) "HTTP/1.1 200 OK"
     ["date"]=>
-    string(29) "Mon, 10 Jul 2017 01:34:45 GMT"
+    string(29) "Fri, 14 Jul 2017 09:20:27 GMT"
     ["content-type"]=>
     string(24) "text/html; charset=utf-8"
     ["transfer-encoding"]=>
@@ -78,13 +87,11 @@ array(8) {
     ["x-ua-compatible"]=>
     string(16) "IE=Edge,chrome=1"
     ["set-cookie"]=>
-    string(99) "logged_in=no; domain=.github.com; path=/; expires=Fri, 10 Jul 2037 01:34:45 -0000; secure; HttpOnly"
-    ["set-cookie-2"]=>
-    string(277) "_gh_sess=eyJzZXNzaW9uX2lkIjoiNTdkOTYxMTk4YWJjMmFjMDUxYjQ0OThhNzk2MmY3NjgiLCJsYXN0X3JlYWRfZnJvbV9yZXBsaWNhcyI6MTQ5OTY1MDQ4NTE2OCwiX2NzcmZfdG9rZW4iOiJKc01pOHNmQ2dPRTZYTzZnT244cEU5VHZ2K3pKV2puamVtWlVoQW84NHAwPSJ9--4fde405b50324c9aaa72f01ef1f41a54b2db6fda; path=/; secure; HttpOnly"
+    string(277) "_gh_sess=eyJzZXNzaW9uX2lkIjoiMjhjOWU4NzU0ZmEwMWM3NGJlMjBlMjc1ZGNkOWM5MWEiLCJsYXN0X3JlYWRfZnJvbV9yZXBsaWNhcyI6MTUwMDAyNDAyNjkzNSwiX2NzcmZfdG9rZW4iOiJrM05uanNJTHN1dk1xUWc3NHNUYi9LZ2RPMjNrZHJvazkwU1F2VXhHYkdvPSJ9--d0cc7dd9efbce8aaa918b9d632b7b8b6f31f6b2b; path=/; secure; HttpOnly"
     ["x-request-id"]=>
-    string(32) "42b939977b0e7b6935e506691885610d"
+    string(32) "f29e7ea183a2e1a87757c5abd05f6a9a"
     ["x-runtime"]=>
-    string(8) "0.064948"
+    string(8) "0.177033"
     ["content-security-policy"]=>
     string(770) "default-src 'none'; base-uri 'self'; child-src render.githubusercontent.com; connect-src 'self' uploads.github.com status.github.com collector.githubapp.com api.github.com www.google-analytics.com github-cloud.s3.amazonaws.com github-production-repository-file-5c1aeb.s3.amazonaws.com github-production-upload-manifest-file-7fdce7.s3.amazonaws.com github-production-user-asset-6210df.s3.amazonaws.com wss://live.github.com; font-src assets-cdn.github.com; form-action 'self' github.com gist.github.com; frame-ancestors 'none'; img-src 'self' data: assets-cdn.github.com identicons.github.com collector.githubapp.com github-cloud.s3.amazonaws.com *.githubusercontent.com; media-src 'none'; script-src assets-cdn.github.com; style-src 'unsafe-inline' assets-cdn.github.com"
     ["strict-transport-security"]=>
@@ -98,16 +105,16 @@ array(8) {
     ["x-xss-protection"]=>
     string(13) "1; mode=block"
     ["x-runtime-rack"]=>
-    string(8) "0.071398"
+    string(8) "0.185461"
     ["content-encoding"]=>
     string(4) "gzip"
-    ["vary-3"]=>
+    ["vary-2"]=>
     string(15) "Accept-Encoding"
     ["x-github-request-id"]=>
-    string(35) "0626:1FAF0:27D3566:3CDF102:5962D9B4"
+    string(33) "823A:1208D:846845:C90F8D:59688CDA"
   }
   ["body"]=>
-  string(54932) "<!DOCTYPE html>
+  string(54914) "<!DOCTYPE html>
 <html lang="en">
   <head>
 
@@ -116,20 +123,48 @@ array(8) {
   </body>
 </html>"
   ["filename"]=>
-  string(58) "/CURL_RESPON-95e60e0de85c2363212e4714d376d2a64b03b6b4.3600"
+  string(58) "/CURL_RESPON-7784acb958509aaf4c6de4d5293f297cf324df86.3600"
   ["exectime"]=>
-  string(8) "1.16 msec"
+  string(8) "2.13 sec"
   ["cookiefile"]=>
   string(70) "/srv/cache/CURL_COOKIE-c2208abde9668e8e9815c3690855edd1e63abeac.604800"
   ["status"]=>
   string(3) "200"
   ["origin"]=>
-  string(5) "cache"
+  string(3) "new"
 }
 */
 ```
 
-### Cache Purging:
+## Usage example, method POST:
+
+```php
+use peterkahl\curlMaster\curlMaster;
+
+$curlm = new curlMaster;
+
+# Set the cache directory
+$curlm->CacheDir = '/var/www/cache';
+
+# If you want to use SSL/TLS, you need to set the location of CA certificate file.
+$curlm->ca_file = '/srv/certs/ca-bundle.crt';
+
+# If you need to set User Agent...
+$curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0';
+
+$curlm->ForcedCacheMaxAge = 3600;
+
+$data = array(
+  'user' => 'admin',
+  'pwd'  => 'oracle',
+);
+
+# The URL you want to cURL
+$response = $curlm->get_curl('https://github.com/', 'POST', $data);
+
+```
+
+## Cache Purging:
 
 Although the cache is being purged automatically, you may want to purge the cache yourself (e.g. as crontab job).
 

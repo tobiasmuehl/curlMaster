@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    2.3 (2017-07-11 09:09:00 GMT)
+ * @version    3.0 (2017-07-14 09:21:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '2.3';
+  const VERSION = '3.0';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -112,31 +112,52 @@ class curlMaster {
    */
   private $LoopLimit = 20;
 
+  /**
+   * HTTP methods this library can handle.
+   * @var array
+   */
+  private $Methods = array(
+    'GET',
+    'POST',
+    'HEAD',
+  );
+
   #===================================================================
 
-  public function get_curl($url) {
+  public function Request($url, $method = 'GET', $data = array()) {
     $start = microtime(true);
     $this->LoopCount++;
+    $postStr    = '';
+    $cookieFile = '';
+    $method     = strtoupper($method);
     #----
-    if (!$this->validateUrl($url)) {
+    if (!$this->ValidUrl($url)) {
       throw new Exception('Illegal value argument url');
+    }
+    #----
+    if (!$this->ValidMethod($method)) {
+      throw new Exception('Illegal value argument method');
+    }
+    #----
+    if ($method == 'POST' && !is_array($data)) {
+      throw new Exception('Method POST requires argument data to be array');
     }
     #----
     if (empty($this->useragent)) {
       $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
     ########################################################
-    if ($this->ForcedCacheMaxAge > -1) {
+    if ($this->ForcedCacheMaxAge >= 0) {
       $this->PurgeCache();
-      $filenameHash = sha1($url . serialize($this->headers) . $this->useragent);
+      $filenameHash = sha1($method . $url . serialize($this->headers) . serialize($data) . $this->useragent);
       foreach (glob($this->CacheDir .'/CURL_RESPON-*') as $cfile) {
         $temp = str_replace($this->CacheDir, '', $cfile);
         $temp = substr($temp, 13, 40);
         if ($filenameHash == $temp) {
           $str = file_get_contents($cfile);
-          $arr = json_decode($str, true);
+          $arr = unserialize($str);
           $arr['origin']   = 'cache';
-          $arr['exectime'] = $this->benchmark($start);
+          $arr['exectime'] = $this->Benchmark($start);
           return $arr;
         }
       }
@@ -156,8 +177,16 @@ class curlMaster {
       return false;
     }
     #----
-    curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  'GET');
-    curl_setopt($ch, CURLOPT_HTTPGET,        true);
+    curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  $method);
+    if ($method == 'GET') {
+      curl_setopt($ch, CURLOPT_HTTPGET,        true);
+    }
+    elseif ($method == 'POST') {
+      $postStr = $this->Array2string($data);
+      curl_setopt($ch, CURLOPT_POST,           count($data));
+      curl_setopt($ch, CURLOPT_POSTFIELDS,     $postStr);
+    }
+    #----
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER,         true);                  # Include headers in response
     curl_setopt($ch, CURLOPT_FORBID_REUSE,   true);
@@ -166,7 +195,6 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_ENCODING ,      '');
     curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);
     #----
-    $cookieFile = '';
     if ($this->EnableCookies) {
       $cookieFile = $this->GetCookieFileName($url);
       curl_setopt($ch, CURLOPT_COOKIEJAR,    $cookieFile);
@@ -194,6 +222,8 @@ class curlMaster {
       $status  = preg_replace('/^HTTP\/\d\.\d\ (\d{3})\ .+$/', '\\1', $headers['status']);
       $arr = array(
         'url'        => $url,
+        'method'     => $method,
+        'req_data'   => $postStr,
         'useragent'  => $this->useragent,
         'headers'    => $headers,
         'body'       => $body,
@@ -205,7 +235,7 @@ class curlMaster {
       );
       ######################################################
       # Cache only if status 200
-      if ($status == '200' && $this->ForcedCacheMaxAge > -1) {
+      if ($status == '200' && $this->ForcedCacheMaxAge >= 0) {
         $cacheTime = $this->ParseCachingHeader($headers);
         if (!empty($this->ForcedCacheMaxAge) && $this->ForcedCacheMaxAge > $cacheTime) {
           $cacheTime = $this->ForcedCacheMaxAge;
@@ -214,13 +244,13 @@ class curlMaster {
           $ext = (string) $cacheTime;
           $filename = '/CURL_RESPON-'. $filenameHash .'.'. $ext;
           $arr['filename'] = $filename;
-          $arr['exectime'] = $this->benchmark($start);
-          file_put_contents($this->CacheDir . $filename, json_encode($arr, JSON_UNESCAPED_UNICODE));
+          $arr['exectime'] = $this->Benchmark($start);
+          file_put_contents($this->CacheDir . $filename, serialize($arr));
           return $arr;
         }
       }
       ######################################################
-      $arr['exectime'] = $this->benchmark($start);
+      $arr['exectime'] = $this->Benchmark($start);
       return $arr;
     }
     if ($err == 6 && $this->LoopCount <= $this->LoopLimit) { # Couldn't resolve host
@@ -233,7 +263,7 @@ class curlMaster {
     if (!$this->debug) {
       return false;
     }
-    throw new Exception('CURL ERROR No. '.$err.'. Details are --'                         . PHP_EOL . PHP_EOL .
+    throw new Exception('CURL ERROR No. '.$err.'. Details are --'                 . PHP_EOL . PHP_EOL .
       str_pad('ERROR ',            22, '.', STR_PAD_RIGHT) .' '. $this->curlErrorCode($err) . PHP_EOL .
       str_pad('Loop Count ',       22, '.', STR_PAD_RIGHT) .' '. $this->LoopCount           . PHP_EOL .
       str_pad('URL ',              22, '.', STR_PAD_RIGHT) .' '. $info['url']               . PHP_EOL .
@@ -246,11 +276,30 @@ class curlMaster {
 
   #===================================================================
 
-  private function validateUrl($url) {
+  private function ValidMethod($str) {
+    return in_array($str, $this->Methods);
+  }
+
+  #===================================================================
+
+  private function ValidUrl($url) {
     if (preg_match('#^https?://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*(:\d{1,5})?/\S*$#', $url)) {
       return true;
     }
     return false;
+  }
+
+  #===================================================================
+
+  private function Array2string($arr, $glue = '&') {
+    if (!is_array($arr)) {
+      throw new Exception('Argument arr must be array');;
+    }
+    $new = array();
+    foreach ($arr as $k => $v) {
+      $new[] = urlencode($k).'='.urlencode($v);
+    }
+    return implode($glue, $new);
   }
 
   #===================================================================
@@ -380,7 +429,7 @@ class curlMaster {
 
   #===================================================================
 
-  private function benchmark($st) {
+  private function Benchmark($st) {
     $val = (microtime(true) - $st);
     if ($val >= 1) {
       return number_format($val, 2, '.', ',').' sec';
