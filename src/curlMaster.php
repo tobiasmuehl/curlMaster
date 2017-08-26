@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.2 (2017-07-14 23:25:00 GMT)
+ * @version    3.3 (2017-07-26 08:45:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.2';
+  const VERSION = '3.3';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -180,21 +180,25 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  $method);
     if ($method == 'GET') {
       curl_setopt($ch, CURLOPT_HTTPGET,        true);
-      curl_setopt($ch, CURLOPT_ENCODING ,      '');
+      curl_setopt($ch, CURLOPT_ENCODING,       '');                  # This will create the 'Accept-Encoding' header
     }
     elseif ($method == 'POST') {
       $postStr = $this->Array2string($data);
-      curl_setopt($ch, CURLOPT_POST,           count($data));
+      curl_setopt($ch, CURLOPT_POST,           true);
       curl_setopt($ch, CURLOPT_POSTFIELDS,     $postStr);
-      curl_setopt($ch, CURLOPT_ENCODING ,      '');
+      curl_setopt($ch, CURLOPT_ENCODING,       '');                  # This will create the 'Accept-Encoding' header
+    }
+    elseif ($method == 'HEAD') {
+      curl_setopt($ch, CURLOPT_NOBODY,         true);
     }
     #----
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER,         true);                  # Include headers in response
     curl_setopt($ch, CURLOPT_FORBID_REUSE,   true);
     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);                  # Follow redirects
+    curl_setopt($ch, CURLOPT_MAXREDIRS,      5);                     # Maximum of redirects
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
-    curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);
+    curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);      # This will create the 'User-Agent' header
     #----
     if ($this->EnableCookies) {
       $cookieFile = $this->GetCookieFileName($url);
@@ -271,7 +275,8 @@ class curlMaster {
       str_pad('HTTP Code ',        22, '.', STR_PAD_RIGHT) .' '. $info['http_code']         . PHP_EOL .
       str_pad('Connect Time ',     22, '.', STR_PAD_RIGHT) .' '. $info['connect_time']      . PHP_EOL .
       str_pad('Total Time ',       22, '.', STR_PAD_RIGHT) .' '. $info['total_time']        . PHP_EOL .
-      str_pad('Name Lookup Time ', 22, '.', STR_PAD_RIGHT) .' '. $info['namelookup_time']   . PHP_EOL
+      str_pad('Name Lookup Time ', 22, '.', STR_PAD_RIGHT) .' '. $info['namelookup_time']   . PHP_EOL .
+      str_pad('PHP Version ',      22, '.', STR_PAD_RIGHT) .' '. $this->getPHPversion()     . PHP_EOL
     );
   }
 
@@ -426,6 +431,17 @@ class curlMaster {
         unlink($filename);
       }
     }
+  }
+
+  #===================================================================
+
+  private function getPHPversion() {
+    $ver = phpversion();
+    preg_match('/^(\d+\.\d+\.?\d*)/', $ver, $match);
+    if (empty($match[1])) {
+      return false;
+    }
+    return $match[1];
   }
 
   #===================================================================
