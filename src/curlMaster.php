@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.3 (2017-07-26 08:45:00 GMT)
+ * @version    3.4 (2017-08-28 00:45:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.3';
+  const VERSION = '3.4';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -85,6 +85,14 @@ class curlMaster {
   public $useragent   = '';
 
   public $timeout_sec = 30;
+
+  /**
+   * Manage redirects.
+   * @var integer ..... value 0  prevents following redirects
+   *                    value >0 limits number of redirects to this number
+   *
+   */
+  public $maxRedirects = 3;
 
   /**
    * Debug: If enabled (true), exception with details
@@ -143,6 +151,10 @@ class curlMaster {
       throw new Exception('Method POST requires argument data to be array');
     }
     #----
+    if (!is_integer($this->maxRedirects) || $this->maxRedirects < 0) {
+      throw new Exception('Property maxRedirects must be integer >= 0');
+    }
+    #----
     if (empty($this->useragent)) {
       $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
@@ -195,10 +207,16 @@ class curlMaster {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER,         true);                  # Include headers in response
     curl_setopt($ch, CURLOPT_FORBID_REUSE,   true);
-    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);                  # Follow redirects
-    curl_setopt($ch, CURLOPT_MAXREDIRS,      5);                     # Maximum of redirects
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
     curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);      # This will create the 'User-Agent' header
+    #----
+    if ($this->maxRedirects == 0) {
+      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);               # Don't follow redirects
+    }
+    elseif ($this->maxRedirects > 0) {
+      curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);                # Follow redirects
+      curl_setopt($ch, CURLOPT_MAXREDIRS,      $this->maxRedirects); # Limit number of redirects
+    }
     #----
     if ($this->EnableCookies) {
       $cookieFile = $this->GetCookieFileName($url);
@@ -237,6 +255,7 @@ class curlMaster {
         'cookiefile' => $cookieFile,
         'status'     => $status,
         'origin'     => 'new',
+        'error'      => $err,
       );
       ######################################################
       # Cache only if status 200
@@ -258,7 +277,7 @@ class curlMaster {
       $arr['exectime'] = $this->Benchmark($start);
       return $arr;
     }
-    if ($err == 6 && $this->LoopCount <= $this->LoopLimit) { # Couldn't resolve host
+    elseif ($err == 6 && $this->LoopCount <= $this->LoopLimit) { # Couldn't resolve host
       usleep(500000);
       return $this->Request($url, $method, $data);
     }
@@ -266,7 +285,20 @@ class curlMaster {
     $info = curl_getinfo($ch);
     curl_close($ch);
     if (!$this->debug) {
-      return false;
+      return array(
+        'url'        => $url,
+        'method'     => $method,
+        'req_data'   => $postStr,
+        'useragent'  => $this->useragent,
+        'headers'    => '',
+        'body'       => '',
+        'filename'   => '',
+        'exectime'   => '',
+        'cookiefile' => $cookieFile,
+        'status'     => '',
+        'origin'     => 'new',
+        'error'      => $err,
+      );
     }
     throw new Exception('CURL ERROR No. '.$err.'. Details are --'                 . PHP_EOL . PHP_EOL .
       str_pad('ERROR ',            22, '.', STR_PAD_RIGHT) .' '. $this->curlErrorCode($err) . PHP_EOL .
@@ -276,7 +308,7 @@ class curlMaster {
       str_pad('Connect Time ',     22, '.', STR_PAD_RIGHT) .' '. $info['connect_time']      . PHP_EOL .
       str_pad('Total Time ',       22, '.', STR_PAD_RIGHT) .' '. $info['total_time']        . PHP_EOL .
       str_pad('Name Lookup Time ', 22, '.', STR_PAD_RIGHT) .' '. $info['namelookup_time']   . PHP_EOL .
-      str_pad('PHP Version ',      22, '.', STR_PAD_RIGHT) .' '. $this->getPHPversion()     . PHP_EOL
+      str_pad('PHP Version ',      22, '.', STR_PAD_RIGHT) .' '. $this->getPHPversion()     . PHP_EOL . PHP_EOL
     );
   }
 
