@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.4 (2017-08-28 00:45:00 GMT)
+ * @version    3.5 (2017-10-07 00:46:00 GMT)
  * @author     Peter Kahl <peter.kahl@colossalmind.com>
  * @since      2015-08-07
  * @copyright  2015-2017 Peter Kahl
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.4';
+  const VERSION = '3.5';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -255,7 +255,7 @@ class curlMaster {
         'cookiefile' => $cookieFile,
         'status'     => $status,
         'origin'     => 'new',
-        'error'      => $err,
+        'error'      => $this->curlErrorCode($err),
       );
       ######################################################
       # Cache only if status 200
@@ -293,11 +293,11 @@ class curlMaster {
         'headers'    => '',
         'body'       => '',
         'filename'   => '',
-        'exectime'   => '',
+        'exectime'   => $this->Benchmark($start),
         'cookiefile' => $cookieFile,
         'status'     => '',
         'origin'     => 'new',
-        'error'      => $err,
+        'error'      => $this->curlErrorCode($err),
       );
     }
     throw new Exception('CURL ERROR No. '.$err.'. Details are --'                 . PHP_EOL . PHP_EOL .
