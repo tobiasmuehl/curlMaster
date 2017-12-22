@@ -2,9 +2,8 @@
 /**
  * Curl Master
  *
- * @version    3.5 (2017-10-07 00:46:00 GMT)
- * @author     Peter Kahl <peter.kahl@colossalmind.com>
- * @since      2015-08-07
+ * @version    3.6 (2017-12-21 23:50:32 GMT)
+ * @author     Peter Kahl <https://github.com/peterkahl>
  * @copyright  2015-2017 Peter Kahl
  * @license    Apache License, Version 2.0
  *
@@ -31,7 +30,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.5';
+  const VERSION = '3.6';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -166,7 +165,7 @@ class curlMaster {
         $temp = str_replace($this->CacheDir, '', $cfile);
         $temp = substr($temp, 13, 40);
         if ($filenameHash == $temp) {
-          $str = file_get_contents($cfile);
+          $str = $this->FileGetContents($cfile);
           $arr = unserialize($str);
           $arr['origin']   = 'cache';
           $arr['exectime'] = $this->Benchmark($start);
@@ -269,7 +268,7 @@ class curlMaster {
           $filename = '/CURL_RESPON-'. $filenameHash .'.'. $ext;
           $arr['filename'] = $filename;
           $arr['exectime'] = $this->Benchmark($start);
-          file_put_contents($this->CacheDir . $filename, serialize($arr));
+          $this->FilePutContents($this->CacheDir . $filename, serialize($arr), LOCK_EX);
           return $arr;
         }
       }
@@ -335,7 +334,7 @@ class curlMaster {
     }
     $new = array();
     foreach ($arr as $k => $v) {
-      $new[] = urlencode($k).'='.urlencode($v);
+      $new[] = urlencode($k) .'='. urlencode($v);
     }
     return implode($glue, $new);
   }
@@ -489,6 +488,37 @@ class curlMaster {
     }
     $val = $val * 1000;
     return number_format($val, 2, '.', ',').' μsec';
+  }
+
+  #===================================================================
+
+  private function FilePutContents($file, $str) {
+    if (!file_exists($file)) {
+      file_put_contents($file, $str, LOCK_EX);
+      return;
+    }
+    $handle = fopen($file, 'r+');
+    while (!flock($handle, LOCK_EX)) {
+      usleep(1);
+    }
+    ftruncate($handle, 0);
+    fwrite($handle, $str);
+    fflush($handle);
+    flock($handle, LOCK_UN);
+    fclose($handle);
+  }
+
+  #===================================================================
+
+  private function FileGetContents($file) {
+    $handle = fopen($file, 'r');
+    while (!flock($handle, LOCK_SH)) {
+      usleep(1);
+    }
+    $contents = fread($handle, filesize($file));
+    flock($handle, LOCK_UN);
+    fclose($handle);
+    return $contents;
   }
 
   #===================================================================
