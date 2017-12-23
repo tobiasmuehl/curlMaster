@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.6 (2017-12-21 23:50:32 GMT)
+ * @version    3.7 (2017-12-23 10:47:49 GMT)
  * @author     Peter Kahl <https://github.com/peterkahl>
  * @copyright  2015-2017 Peter Kahl
  * @license    Apache License, Version 2.0
@@ -30,7 +30,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.6';
+  const VERSION = '3.7';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -268,7 +268,7 @@ class curlMaster {
           $filename = '/CURL_RESPON-'. $filenameHash .'.'. $ext;
           $arr['filename'] = $filename;
           $arr['exectime'] = $this->Benchmark($start);
-          $this->FilePutContents($this->CacheDir . $filename, serialize($arr), LOCK_EX);
+          $this->FilePutContents($this->CacheDir . $filename, serialize($arr));
           return $arr;
         }
       }
@@ -493,32 +493,25 @@ class curlMaster {
   #===================================================================
 
   private function FilePutContents($file, $str) {
-    if (!file_exists($file)) {
-      file_put_contents($file, $str, LOCK_EX);
-      return;
-    }
-    $handle = fopen($file, 'r+');
-    while (!flock($handle, LOCK_EX)) {
+    $fileObj = new SplFileObject($file, 'w');
+    while (!$fileObj->flock(LOCK_EX)) {
       usleep(1);
     }
-    ftruncate($handle, 0);
-    fwrite($handle, $str);
-    fflush($handle);
-    flock($handle, LOCK_UN);
-    fclose($handle);
+    $bytes = $fileObj->fwrite($str);
+    $fileObj->flock(LOCK_UN);
+    return $bytes;
   }
 
   #===================================================================
 
   private function FileGetContents($file) {
-    $handle = fopen($file, 'r');
-    while (!flock($handle, LOCK_SH)) {
+    $fileObj = new SplFileObject($file, 'r');
+    while (!$fileObj->flock(LOCK_EX)) {
       usleep(1);
     }
-    $contents = fread($handle, filesize($file));
-    flock($handle, LOCK_UN);
-    fclose($handle);
-    return $contents;
+    $str = $fileObj->fread($fileObj->getSize());
+    $fileObj->flock(LOCK_UN);
+    return $str;
   }
 
   #===================================================================
