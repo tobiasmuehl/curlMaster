@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.7 (2017-12-23 10:47:49 GMT)
+ * @version    3.8 (2017-12-23 11:08:31 GMT)
  * @author     Peter Kahl <https://github.com/peterkahl>
  * @copyright  2015-2017 Peter Kahl
  * @license    Apache License, Version 2.0
@@ -23,6 +23,7 @@
 namespace peterkahl\curlMaster;
 
 use \Exception;
+use \SplFileObject;
 
 class curlMaster {
 
@@ -30,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.7';
+  const VERSION = '3.8';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
