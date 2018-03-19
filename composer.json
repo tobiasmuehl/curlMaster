@@ -4,7 +4,7 @@
     "description": "Simple cURL wrapper with response caching and cookie storage.",
     "keywords": ["curl", "http-client", "http", "https"],
     "homepage": "https://github.com/peterkahl/curlMaster",
-    "license": "Apache License Version 2.0",
+    "license": "Apache-2.0",
     "authors": [
         {
             "name": "Peter Kahl",
