@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    3.8 (2017-12-23 11:08:31 GMT)
+ * @version    2018-03-26 07:22:00 GMT)
  * @author     Peter Kahl <https://github.com/peterkahl>
  * @copyright  2015-2017 Peter Kahl
  * @license    Apache License, Version 2.0
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.8';
+  const VERSION = '3.9';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -84,6 +84,10 @@ class curlMaster {
    */
   public $useragent   = '';
 
+  /**
+   * Time Out
+   * @var integer
+   */
   public $timeout_sec = 30;
 
   /**
@@ -132,6 +136,13 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Makes cURL Request
+   * @param  string $url
+   * @param  string $method
+   * @param  array  $data
+   * @return mixed
+   */
   public function Request($url, $method = 'GET', $data = array()) {
     $start = microtime(true);
     $this->LoopCount++;
@@ -314,12 +325,22 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Validates Method
+   * @param  string $str
+   * @return boolean
+   */
   private function ValidMethod($str) {
     return in_array($str, $this->Methods);
   }
 
   #===================================================================
 
+  /**
+   * Validates URL string
+   * @param  string $url
+   * @return boolean
+   */
   private function ValidUrl($url) {
     if (preg_match('#^https?://([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*(:\d{1,5})?/\S*$#', $url)) {
       return true;
@@ -329,6 +350,12 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Converts array to string
+   * @param  array  $arr
+   * @param  string $glue
+   * @return string
+   */
   private function Array2string($arr, $glue = '&') {
     if (!is_array($arr)) {
       throw new Exception('Argument arr must be array');;
@@ -342,6 +369,11 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Parses headers from string
+   * @param  string $str
+   * @return array
+   */
   private function getHeaders($str) {
     $str = explode("\r\n\r\n", $str);
     $str = reset($str);
@@ -369,6 +401,11 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Parses body from string
+   * @param  string $str
+   * @return string
+   */
   private function getBody($str) {
     $str = substr($str, strpos($str, "\r\n\r\n"));
     return trim($str);
@@ -379,7 +416,8 @@ class curlMaster {
   /**
    * Parses the response headers and returns the number of seconds
    * that will be the maximum caching time of our cached file.
-   *
+   * @param  array  $arr
+   * @return integer
    */
   private function ParseCachingHeader($arr) {
     #--------------------------------------
@@ -433,6 +471,11 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Returns name of a cookie file
+   * @param  string $url
+   * @return string
+   */
   private function GetCookieFileName($url) {
     $temp = parse_url($url);
     $ext  = (string) $this->CookieMaxAge;
@@ -443,7 +486,8 @@ class curlMaster {
 
   /**
    * File extension signifies maximum age (caching time).
-   *
+   * @param  string $str
+   * @return integer
    */
   private function MaxAge($str) {
     if (strpos($str, '.') === false) {
@@ -456,6 +500,10 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Deletes a cache file
+   * @param  string $filename
+   */
   public function DeleteChacheFile($filename) {
     if (preg_match('/^\/CURL_RESPON-[0-9a-f]{40}\.\d+$/', $filename)) {
       $filename = $this->CacheDir . $filename;
@@ -467,6 +515,10 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Returns PHP Version
+   * @return  mixed
+   */
   private function getPHPversion() {
     $ver = phpversion();
     preg_match('/^(\d+\.\d+\.?\d*)/', $ver, $match);
@@ -478,6 +530,12 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Subtracts two floats and makes the result
+   * human-readable
+   * @param  float  $st
+   * @return string
+   */
   private function Benchmark($st) {
     $val = (microtime(true) - $st);
     if ($val >= 1) {
@@ -493,6 +551,12 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Saves string inside a file
+   * @param  string  $file
+   * @param  string  $str
+   * @return boolean
+   */
   private function FilePutContents($file, $str) {
     $fileObj = new SplFileObject($file, 'w');
     while (!$fileObj->flock(LOCK_EX)) {
@@ -505,6 +569,11 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Retrieves contents of a file
+   * @param  string  $file
+   * @return string
+   */
   private function FileGetContents($file) {
     $fileObj = new SplFileObject($file, 'r');
     while (!$fileObj->flock(LOCK_EX)) {
@@ -517,6 +586,11 @@ class curlMaster {
 
   #===================================================================
 
+  /**
+   * Human-readable error code
+   * @param  integer $n
+   * @return string
+   */
   private function curlErrorCode($n) {
     $code = array (
       0  => 'CURLE_OK',
