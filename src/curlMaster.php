@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    2018-03-26 07:22:00 GMT)
+ * @version    2018-03-26 07:22:00 GMT
  * @author     Peter Kahl <https://github.com/peterkahl>
  * @copyright  2015-2017 Peter Kahl
  * @license    Apache License, Version 2.0
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.9';
+  const VERSION = '3.9.1';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -142,6 +142,7 @@ class curlMaster {
    * @param  string $method
    * @param  array  $data
    * @return mixed
+   * @throws Exception
    */
   public function Request($url, $method = 'GET', $data = array()) {
     $start = microtime(true);
@@ -355,6 +356,7 @@ class curlMaster {
    * @param  array  $arr
    * @param  string $glue
    * @return string
+   * @throws Exception
    */
   private function Array2string($arr, $glue = '&') {
     if (!is_array($arr)) {
@@ -488,6 +490,7 @@ class curlMaster {
    * File extension signifies maximum age (caching time).
    * @param  string $str
    * @return integer
+   * @throws Exception
    */
   private function MaxAge($str) {
     if (strpos($str, '.') === false) {
@@ -517,13 +520,13 @@ class curlMaster {
 
   /**
    * Returns PHP Version
-   * @return  mixed
+   * @return  string
    */
   private function getPHPversion() {
     $ver = phpversion();
     preg_match('/^(\d+\.\d+\.?\d*)/', $ver, $match);
     if (empty($match[1])) {
-      return false;
+      return '';
     }
     return $match[1];
   }
