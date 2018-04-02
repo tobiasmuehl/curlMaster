@@ -2,7 +2,7 @@
 /**
  * Curl Master
  *
- * @version    2018-03-26 07:22:00 GMT
+ * @version    2018-04-02 12:45:00 GMT
  * @author     Peter Kahl <https://github.com/peterkahl>
  * @copyright  2015-2017 Peter Kahl
  * @license    Apache License, Version 2.0
@@ -31,7 +31,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.9.1';
+  const VERSION = '3.10';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -138,13 +138,15 @@ class curlMaster {
 
   /**
    * Makes cURL Request
-   * @param  string $url
-   * @param  string $method
-   * @param  array  $data
+   * @param  string  $url
+   * @param  string  $method
+   * @param  array   $data
+   * @param  boolean $forceReq ... Request to temote server will be 
+   *                               made regardless of cached file.
    * @return mixed
    * @throws Exception
    */
-  public function Request($url, $method = 'GET', $data = array()) {
+  public function Request($url, $method = 'GET', $data = array(), $forceReq = false) {
     $start = microtime(true);
     $this->LoopCount++;
     $postStr    = '';
@@ -170,10 +172,11 @@ class curlMaster {
     if (empty($this->useragent)) {
       $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
+    #----
+    $filenameHash = sha1($method . $url . serialize($this->headers) . serialize($data) . $this->useragent);
     ########################################################
-    if ($this->ForcedCacheMaxAge >= 0) {
+    if (!$forceReq && $this->ForcedCacheMaxAge >= 0) {
       $this->PurgeCache();
-      $filenameHash = sha1($method . $url . serialize($this->headers) . serialize($data) . $this->useragent);
       foreach (glob($this->CacheDir .'/CURL_RESPON-*') as $cfile) {
         $temp = str_replace($this->CacheDir, '', $cfile);
         $temp = substr($temp, 13, 40);
