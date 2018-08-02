@@ -1,6 +1,6 @@
 # curlMaster
 
-cURL wrapper with response caching and cookie storage, methods GET, POST, HEAD.
+A wrapper for the cURL extension with response caching and cookie storage, with request methods GET, POST, HEAD.
 
 ## Usage example, method GET:
 
@@ -13,6 +13,8 @@ $curlm = new curlMaster;
 $curlm->CacheDir = '/var/www/cache';
 
 # If you want to use SSL/TLS, you need to set the location of CA certificate file.
+# You may download and install on your server this Mozilla CA bundle
+# from this page: <https://curl.haxx.se/docs/caextract.html>
 $curlm->ca_file = '/srv/certs/ca-bundle.crt';
 
 # If you need to set User Agent...
@@ -34,6 +36,15 @@ $curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Geck
  *
  */
 $curlm->ForcedCacheMaxAge = 3600;
+
+/**
+ * Enable purging of outdated cache files on each request.
+ * Disabled (false) by default.
+ * If you don't purge the cache yourself (i.e. using crontab and
+ * the method PurgeCache), you should change this to true.
+ * @var boolean
+ */
+public $curlm->PurgeEnableOnEachRequest = false;
 
 # The URL you want to cURL (method GET)
 $response = $curlm->Request('https://github.com/');
@@ -144,7 +155,7 @@ use peterkahl\curlMaster\curlMaster;
 $curlm = new curlMaster;
 
 # Set the cache directory
-$curlm->CacheDir = '/var/www/cache';
+$curlm->CacheDir = '/mycachedirectory';
 
 # If you want to use SSL/TLS, you need to set the location of CA certificate file.
 $curlm->ca_file = '/srv/certs/ca-bundle.crt';
@@ -166,7 +177,7 @@ $response = $curlm->Request('https://whatever.anything/login', 'POST', $data);
 
 ## Cache Purging:
 
-Although the cache is being purged automatically, you may want to purge the cache yourself (e.g. as crontab job).
+Although the cache is being purged automatically on each request (GET, POST, HEAD), an alternative is to purge the cache yourself, e.g. as crontab job using the available method `PurgeCache()`.
 
 ```php
 use peterkahl\curlMaster\curlMaster;
@@ -174,7 +185,7 @@ use peterkahl\curlMaster\curlMaster;
 $curlm = new curlMaster;
 
 # Set the cache directory
-$curlm->CacheDir = '/var/www/cache';
+$curlm->CacheDir = '/mycachedirectory';
 
 $curlm->PurgeCache();
 ```

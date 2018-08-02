@@ -1,10 +1,11 @@
 <?php
 /**
  * Curl Master
+ * A wrapper for the cURL extension with response caching and cookie storage.
  *
- * @version    2018-04-02 12:45:00 GMT
+ * @version    2018-08-02 03:15:22 GMT
  * @author     Peter Kahl <https://github.com/peterkahl>
- * @copyright  2015-2017 Peter Kahl
+ * @copyright  2015-2018 Peter Kahl
  * @license    Apache License, Version 2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +32,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.10';
+  const VERSION = '3.11';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -134,6 +135,15 @@ class curlMaster {
     'HEAD',
   );
 
+  /**
+   * Enable purging of outdated cache files on each request.
+   * Disabled (false) by default.
+   * If you don't purge the cache yourself (i.e. using crontab and
+   * the method PurgeCache), you should change this to true.
+   * @var boolean
+   */
+  public $PurgeEnableOnEachRequest = false;
+
   #===================================================================
 
   /**
@@ -141,8 +151,8 @@ class curlMaster {
    * @param  string  $url
    * @param  string  $method
    * @param  array   $data
-   * @param  boolean $forceReq ... Request to temote server will be 
-   *                               made regardless of cached file.
+   * @param  boolean $forceReq ... Request to temote server will be made
+   *                               regardless of existence of a cached file.
    * @return mixed
    * @throws Exception
    */
@@ -176,11 +186,13 @@ class curlMaster {
     $filenameHash = sha1($method . $url . serialize($this->headers) . serialize($data) . $this->useragent);
     ########################################################
     if (!$forceReq && $this->ForcedCacheMaxAge >= 0) {
-      $this->PurgeCache();
+      if ($this->PurgeEnableOnEachRequest) {
+        $this->PurgeCache();
+      }
       foreach (glob($this->CacheDir .'/CURL_RESPON-*') as $cfile) {
         $temp = str_replace($this->CacheDir, '', $cfile);
         $temp = substr($temp, 13, 40);
-        if ($filenameHash == $temp) {
+        if ($filenameHash == $temp && file_exists($cfile)) {
           $str = $this->FileGetContents($cfile);
           $arr = unserialize($str);
           $arr['origin']   = 'cache';
@@ -244,10 +256,11 @@ class curlMaster {
     }
     #----
     if (preg_match('/^https:/', $url)) {
-      curl_setopt($ch, CURLOPT_SSLVERSION,     6);                   # TLSv1.2
-      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-      curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
-      curl_setopt($ch, CURLOPT_CAINFO,         $this->ca_file);
+      curl_setopt($ch, CURLOPT_SSLVERSION,      6);                  # TLSv1.2
+      curl_setopt($ch, CURLOPT_SSL_VERIFYPEER,  true);
+      curl_setopt($ch, CURLOPT_SSL_VERIFYHOST,  2);
+      curl_setopt($ch, CURLOPT_CAINFO,          $this->ca_file);
+      curl_setopt($ch, CURLOPT_SSL_CIPHER_LIST, 'AESGCM:!PSK');
     }
     #----
     $res = curl_exec($ch);
@@ -468,8 +481,8 @@ class curlMaster {
   public function PurgeCache() {
     foreach (glob($this->CacheDir .'/CURL_*') as $filename) {
       $seconds = $this->MaxAge($filename);
-      if (filemtime($filename) < (time() - $seconds)) {
-        unlink($filename);
+      if (file_exists($filename) && @filemtime($filename) < (time() - $seconds)) {
+        @unlink($filename);
       }
     }
   }
