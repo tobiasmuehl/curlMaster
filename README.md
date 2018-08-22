@@ -9,15 +9,31 @@ use peterkahl\curlMaster\curlMaster;
 
 $curlm = new curlMaster;
 
-# Set the cache directory
+/**
+ * Set the cache directory
+ * @var string
+ */
 $curlm->CacheDir = '/var/www/cache';
 
-# If you want to use SSL/TLS, you need to set the location of CA certificate file.
-# You may download and install on your server this Mozilla CA bundle
-# from this page: <https://curl.haxx.se/docs/caextract.html>
+/**
+ * If you want to use SSL/TLS, you need to set the location of CA certificate file.
+ * You may download and install on your server this Mozilla CA bundle
+ * from this page: <https://curl.haxx.se/docs/caextract.html>
+ * @var string
+ */
 $curlm->ca_file = '/srv/certs/ca-bundle.crt';
 
-# If you need to set User Agent...
+/**
+ * Cipher string
+ * Optionally, you may define ciphers for TLS connection.
+ * @var string .... example 'AESGCM:!PSK'
+ */
+$curlm->CipherString = 'AESGCM:!PSK';
+
+/**
+ * If you need to set User Agent
+ * @var string
+ */
 $curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0';
 
 /**
@@ -46,7 +62,10 @@ $curlm->ForcedCacheMaxAge = 3600;
  */
 public $curlm->PurgeEnableOnEachRequest = false;
 
-# The URL you want to cURL (method GET)
+/**
+ * The URL you want to cURL (method GET)
+ * @param string
+ */
 $response = $curlm->Request('https://github.com/');
 
 $url        = $response['url'];
@@ -154,15 +173,48 @@ use peterkahl\curlMaster\curlMaster;
 
 $curlm = new curlMaster;
 
-# Set the cache directory
-$curlm->CacheDir = '/mycachedirectory';
+/**
+ * Set the cache directory
+ * @var string
+ */
+$curlm->CacheDir = '/var/www/cache';
 
-# If you want to use SSL/TLS, you need to set the location of CA certificate file.
+/**
+ * If you want to use SSL/TLS, you need to set the location of CA certificate file.
+ * You may download and install on your server this Mozilla CA bundle
+ * from this page: <https://curl.haxx.se/docs/caextract.html>
+ * @var string
+ */
 $curlm->ca_file = '/srv/certs/ca-bundle.crt';
 
-# If you need to set User Agent...
+/**
+ * Cipher string
+ * Optionally, you may define ciphers for TLS connection.
+ * @var string .... example 'AESGCM:!PSK'
+ */
+$curlm->CipherString = 'AESGCM:!PSK';
+
+/**
+ * If you need to set User Agent
+ * @var string
+ */
 $curlm->useragent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0';
 
+/**
+ * Caching control & Maximum age of forced cache (in seconds).
+ *
+ * All responses are cached, but when this value is > 0, caching
+ * will be forced regardless of the response headers.
+ * Forced caching is useful when you expect the same response for each
+ * request or when:
+ *   -- debugging
+ *   -- you cURL an API with request limit
+ *
+ * @var integer .... value 0 disables forced caching while header-dependent caching is still on
+ *                   value >0 enables forced caching and overrides header-dependent caching
+ *                   value <0 disables caching altogether (example -1)
+ *
+ */
 $curlm->ForcedCacheMaxAge = 3600;
 
 $data = array(
@@ -170,7 +222,9 @@ $data = array(
   'pwd'  => 'oracle',
 );
 
-# The URL you want to cURL
+/**
+ * The URL you want to cURL
+ */
 $response = $curlm->Request('https://whatever.anything/login', 'POST', $data);
 
 ```
@@ -184,7 +238,10 @@ use peterkahl\curlMaster\curlMaster;
 
 $curlm = new curlMaster;
 
-# Set the cache directory
+/**
+ * Set the cache directory
+ * @var string
+ */
 $curlm->CacheDir = '/mycachedirectory';
 
 $curlm->PurgeCache();

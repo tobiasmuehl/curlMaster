@@ -3,7 +3,7 @@
  * Curl Master
  * A wrapper for the cURL extension with response caching and cookie storage.
  *
- * @version    2018-08-02 03:15:22 GMT
+ * @version    2018-08-22 18:59:00 GMT
  * @author     Peter Kahl <https://github.com/peterkahl>
  * @copyright  2015-2018 Peter Kahl
  * @license    Apache License, Version 2.0
@@ -32,7 +32,7 @@ class curlMaster {
    * Version
    * @var string
    */
-  const VERSION = '3.11';
+  const VERSION = '3.12';
 
   /**
    * Caching control & Maximum age of forced cache (in seconds).
@@ -77,6 +77,13 @@ class curlMaster {
    * <https://curl.haxx.se/docs/caextract.html>
    */
   public $ca_file;
+
+  /**
+   * Cipher string
+   * Optionally, you may define ciphers for TLS connection.
+   * @var string .... example 'AESGCM:!PSK'
+   */
+  public $CipherString;
 
   /**
    * User Agent
@@ -144,7 +151,6 @@ class curlMaster {
    */
   public $PurgeEnableOnEachRequest = false;
 
-  #===================================================================
 
   /**
    * Makes cURL Request
@@ -154,37 +160,42 @@ class curlMaster {
    * @param  boolean $forceReq ... Request to temote server will be made
    *                               regardless of existence of a cached file.
    * @return mixed
-   * @throws Exception
+   * @throws \Exception
    */
   public function Request($url, $method = 'GET', $data = array(), $forceReq = false) {
+
     $start = microtime(true);
     $this->LoopCount++;
     $postStr    = '';
     $cookieFile = '';
     $method     = strtoupper($method);
-    #----
+
     if (!$this->ValidUrl($url)) {
       throw new Exception('Illegal value argument url');
     }
-    #----
+
     if (!$this->ValidMethod($method)) {
       throw new Exception('Illegal value argument method');
     }
-    #----
+
     if ($method == 'POST' && !is_array($data)) {
       throw new Exception('Method POST requires argument data to be array');
     }
-    #----
+
     if (!is_integer($this->maxRedirects) || $this->maxRedirects < 0) {
       throw new Exception('Property maxRedirects must be integer >= 0');
     }
-    #----
+
     if (empty($this->useragent)) {
       $this->useragent = 'Mozilla/5.0 (curlMaster/'. self::VERSION .'; +https://github.com/peterkahl/curlMaster)';
     }
-    #----
-    $filenameHash = sha1($method . $url . serialize($this->headers) . serialize($data) . $this->useragent);
-    ########################################################
+
+    if (empty($this->CipherString)) {
+      $this->CipherString = '';
+    }
+
+    $filenameHash = sha1($method . $url . serialize($this->headers) . serialize($data) . $this->useragent) . $this->CipherString;
+
     if (!$forceReq && $this->ForcedCacheMaxAge >= 0) {
       if ($this->PurgeEnableOnEachRequest) {
         $this->PurgeCache();
@@ -201,7 +212,7 @@ class curlMaster {
         }
       }
     }
-    ########################################################
+
     if (preg_match('/^https:/', $url)) {
       if (empty($this->ca_file)) {
         throw new Exception('Empty property ca_file');
@@ -210,13 +221,14 @@ class curlMaster {
         throw new Exception('Unable to read file '.$this->ca_file);
       }
     }
-    #----
+
     $ch = curl_init($url);
     if ($ch == false) {
       return false;
     }
-    #----
+
     curl_setopt($ch, CURLOPT_CUSTOMREQUEST,  $method);
+
     if ($method == 'GET') {
       curl_setopt($ch, CURLOPT_HTTPGET,        true);
       curl_setopt($ch, CURLOPT_ENCODING,       '');                  # This will create the 'Accept-Encoding' header
@@ -230,13 +242,13 @@ class curlMaster {
     elseif ($method == 'HEAD') {
       curl_setopt($ch, CURLOPT_NOBODY,         true);
     }
-    #----
+
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
     curl_setopt($ch, CURLOPT_HEADER,         true);                  # Include headers in response
     curl_setopt($ch, CURLOPT_FORBID_REUSE,   true);
     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout_sec);
     curl_setopt($ch, CURLOPT_USERAGENT,      $this->useragent);      # This will create the 'User-Agent' header
-    #----
+
     if ($this->maxRedirects == 0) {
       curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);               # Don't follow redirects
     }
@@ -244,28 +256,30 @@ class curlMaster {
       curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);                # Follow redirects
       curl_setopt($ch, CURLOPT_MAXREDIRS,      $this->maxRedirects); # Limit number of redirects
     }
-    #----
+
     if ($this->EnableCookies) {
       $cookieFile = $this->GetCookieFileName($url);
       curl_setopt($ch, CURLOPT_COOKIEJAR,    $cookieFile);
       curl_setopt($ch, CURLOPT_COOKIEFILE,   $cookieFile);
     }
-    #----
+
     if (!empty($this->headers)) {
       curl_setopt($ch, CURLOPT_HTTPHEADER,   $this->headers);
     }
-    #----
+
     if (preg_match('/^https:/', $url)) {
       curl_setopt($ch, CURLOPT_SSLVERSION,      6);                  # TLSv1.2
       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER,  true);
       curl_setopt($ch, CURLOPT_SSL_VERIFYHOST,  2);
       curl_setopt($ch, CURLOPT_CAINFO,          $this->ca_file);
-      curl_setopt($ch, CURLOPT_SSL_CIPHER_LIST, 'AESGCM:!PSK');
+      if (!empty($this->CipherString)) {
+        curl_setopt($ch, CURLOPT_SSL_CIPHER_LIST, $this->CipherString);
+      }
     }
-    #----
+
     $res = curl_exec($ch);
     $err = curl_errno($ch);
-    #----
+
     if ($err == 0) { # Success
       curl_close($ch);
       $headers = $this->getHeaders($res);
@@ -309,7 +323,7 @@ class curlMaster {
       usleep(500000);
       return $this->Request($url, $method, $data);
     }
-    #----
+
     $info = curl_getinfo($ch);
     curl_close($ch);
     if (!$this->debug) {
@@ -340,7 +354,6 @@ class curlMaster {
     );
   }
 
-  #===================================================================
 
   /**
    * Validates Method
@@ -351,7 +364,6 @@ class curlMaster {
     return in_array($str, $this->Methods);
   }
 
-  #===================================================================
 
   /**
    * Validates URL string
@@ -365,14 +377,13 @@ class curlMaster {
     return false;
   }
 
-  #===================================================================
 
   /**
    * Converts array to string
    * @param  array  $arr
    * @param  string $glue
    * @return string
-   * @throws Exception
+   * @throws \Exception
    */
   private function Array2string($arr, $glue = '&') {
     if (!is_array($arr)) {
@@ -385,7 +396,6 @@ class curlMaster {
     return implode($glue, $new);
   }
 
-  #===================================================================
 
   /**
    * Parses headers from string
@@ -417,7 +427,6 @@ class curlMaster {
     return $new;
   }
 
-  #===================================================================
 
   /**
    * Parses body from string
@@ -429,7 +438,6 @@ class curlMaster {
     return trim($str);
   }
 
-  #===================================================================
 
   /**
    * Parses the response headers and returns the number of seconds
@@ -438,7 +446,7 @@ class curlMaster {
    * @return integer
    */
   private function ParseCachingHeader($arr) {
-    #--------------------------------------
+
     if (!empty($arr['cache-control'])) {
       if (strpos('no-cache', $arr['cache-control']) !== false) {
         return 0;
@@ -453,7 +461,7 @@ class curlMaster {
         return (integer) $match[1];
       }
     }
-    #--------------------------------------
+
     if (!empty($arr['expires'])) {
       if (preg_match('/^-\d+|0$/', $arr['expires'])) {
         return 0;
@@ -465,11 +473,10 @@ class curlMaster {
       }
       return 0;
     }
-    #--------------------------------------
+
     return 0;
   }
 
-  #===================================================================
 
   /**
    * Purge cache
@@ -487,7 +494,6 @@ class curlMaster {
     }
   }
 
-  #===================================================================
 
   /**
    * Returns name of a cookie file
@@ -500,13 +506,12 @@ class curlMaster {
     return $this->CacheDir .'/CURL_COOKIE-'. sha1($temp['host']) .'.'. $ext;
   }
 
-  #===================================================================
 
   /**
    * File extension signifies maximum age (caching time).
    * @param  string $str
    * @return integer
-   * @throws Exception
+   * @throws \Exception
    */
   private function MaxAge($str) {
     if (strpos($str, '.') === false) {
@@ -517,7 +522,6 @@ class curlMaster {
     return (integer) $str;
   }
 
-  #===================================================================
 
   /**
    * Deletes a cache file
@@ -532,7 +536,6 @@ class curlMaster {
     }
   }
 
-  #===================================================================
 
   /**
    * Returns PHP Version
@@ -547,7 +550,6 @@ class curlMaster {
     return $match[1];
   }
 
-  #===================================================================
 
   /**
    * Subtracts two floats and makes the result
@@ -568,7 +570,6 @@ class curlMaster {
     return number_format($val, 2, '.', ',').' μsec';
   }
 
-  #===================================================================
 
   /**
    * Saves string inside a file
@@ -586,7 +587,6 @@ class curlMaster {
     return $bytes;
   }
 
-  #===================================================================
 
   /**
    * Retrieves contents of a file
@@ -603,7 +603,6 @@ class curlMaster {
     return $str;
   }
 
-  #===================================================================
 
   /**
    * Human-readable error code
@@ -699,5 +698,4 @@ class curlMaster {
     return '';
   }
 
-  #===================================================================
 }
