@@ -64,7 +64,7 @@ $curlm->ForcedCacheMaxAge = 3600;
  * the method PurgeCache), you should change this to true.
  * @var boolean
  */
-public $curlm->PurgeEnableOnEachRequest = false;
+$curlm->PurgeEnableOnEachRequest = false;
 
 /**
  * The URL you want to cURL (method GET)
